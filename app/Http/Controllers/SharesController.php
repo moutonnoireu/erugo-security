@@ -262,11 +262,13 @@ class SharesController extends Controller
 
     if ($share->password) {
       $password = request()->input('password');
-      if (!$password) {
-        return response()->json(['error' => 'Password required'], 401);
-      }
-      if (!Hash::check($password, $share->password)) {
-        return response()->json(['error' => 'Invalid password'], 401);
+      if (!$password || !Hash::check($password, $share->password)) {
+        $reason = $password ? 'invalid_password' : 'password_required';
+        // Browser navigation goes back to the share page (which shows a toast); API clients keep the JSON 401
+        if (!request()->expectsJson()) {
+          return redirect()->to('/shares/' . $shareId . '?error=' . $reason);
+        }
+        return response()->json(['error' => $reason === 'invalid_password' ? 'Invalid password' : 'Password required'], 401);
       }
     }
 
