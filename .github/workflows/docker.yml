@@ -18,6 +18,10 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: php-fix
+      - id: ver
+        run: echo "v=$(sed 's/^v//' .upstream-version | tr -d '\n')" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -25,14 +29,34 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - name: Build (amd64) for scan
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/alpine/Dockerfile
+          platforms: linux/amd64
+          pull: true
+          load: true
+          tags: erugo-scan:ci
+          build-args: VERSION=${{ steps.ver.outputs.v }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Trivy scan (fail on fixable CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: erugo-scan:ci
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Publish multi-arch
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/alpine/Dockerfile
           platforms: linux/amd64,linux/arm64
-          pull: true
           push: true
-          build-args: VERSION=0.2.15-php8336
+          build-args: VERSION=${{ steps.ver.outputs.v }}
+          cache-from: type=gha
           tags: |
             ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:0.2.15-alpine3.24
+            ${{ env.IMAGE }}:${{ steps.ver.outputs.v }}

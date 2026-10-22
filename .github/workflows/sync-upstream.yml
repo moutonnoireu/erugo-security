@@ -1,0 +1,38 @@
+name: Sync upstream release
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: php-fix
+          fetch-depth: 0
+      - name: Merge latest upstream tag into a PR branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git remote add upstream https://github.com/ErugoOSS/Erugo.git
+          git fetch upstream --tags --no-recurse-submodules
+          latest=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          current=$(cat .upstream-version)
+          [ "$latest" = "$current" ] && { echo "up to date ($current)"; exit 0; }
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout -b "sync/$latest"
+          git merge --no-edit "$latest"
+          echo "$latest" > .upstream-version
+          git commit -am "Upstream $latest"
+          git push -u origin "sync/$latest"
+          gh pr create --base php-fix --head "sync/$latest" \
+            --title "Upstream $latest" \
+            --body "Merge upstream tag $latest. Check migrations before deploying."
