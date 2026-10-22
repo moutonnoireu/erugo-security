@@ -262,11 +262,13 @@ class SharesController extends Controller
 
     if ($share->password) {
       $password = request()->input('password');
-      if (!$password) {
-        return response()->json(['error' => 'Password required'], 401);
-      }
-      if (!Hash::check($password, $share->password)) {
-        return response()->json(['error' => 'Invalid password'], 401);
+      if (!$password || !Hash::check($password, $share->password)) {
+        $reason = $password ? 'invalid_password' : 'password_required';
+        // Browser navigation goes back to the share page (which shows a toast); API clients keep the JSON 401
+        if (!request()->expectsJson()) {
+          return redirect()->to('/shares/' . $shareId . '?error=' . $reason);
+        }
+        return response()->json(['error' => $reason === 'invalid_password' ? 'Invalid password' : 'Password required'], 401);
       }
     }
 
@@ -291,13 +293,21 @@ class SharesController extends Controller
       $expectedPath = $file->full_path ? $file->full_path . '/' . $file->display_name : $file->display_name;
       
       if ($filepath === $expectedPath || $filepath === $file->display_name) {
-        $sharePath = storage_path('app/shares/' . $share->path);
-        $filePath = $sharePath . '/' . $file->name;
-        
-        if (file_exists($filePath)) {
+        $sharePath = realpath(storage_path('app/shares/' . $share->path));
+        $filePath = $sharePath . '/' . ($file->full_path ? $file->full_path . '/' : '') . $file->name;
+        $resolvedFilePath = realpath($filePath);
+
+        // Boundary check: ensure the resolved file path stays within the share directory
+        if ($sharePath === false || $resolvedFilePath === false ||
+            strpos($resolvedFilePath, $sharePath . DIRECTORY_SEPARATOR) !== 0 &&
+            $resolvedFilePath !== $sharePath) {
+          return response()->json(['error' => 'File not found'], 404);
+        }
+
+        if (file_exists($resolvedFilePath)) {
           $this->createDownloadRecord($share);
           return response()->download(
-            $filePath,
+            $resolvedFilePath,
             $this->sanitizeDownloadFilename($file->display_name)
           );
         }
