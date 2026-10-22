@@ -4,17 +4,28 @@ updates:
     directory: /
     schedule: { interval: weekly }
     groups:
-      composer-minor-patch:
-        update-types: [minor, patch]
+      composer-all:
+        patterns: ["*"]
+        applies-to: version-updates
+      composer-security:
+        patterns: ["*"]
+        applies-to: security-updates
   - package-ecosystem: npm
     directory: /
     schedule: { interval: weekly }
     groups:
-      npm-minor-patch:
-        update-types: [minor, patch]
+      npm-all:
+        patterns: ["*"]
+        applies-to: version-updates
+      npm-security:
+        patterns: ["*"]
+        applies-to: security-updates
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    groups:
+      actions-all:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /docker/alpine
     schedule: { interval: weekly }
