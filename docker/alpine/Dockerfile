@@ -76,7 +76,7 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Download and install tusd for the correct architecture
-ENV TUSD_VERSION=2.6.0
+ENV TUSD_VERSION=2.10.1
 RUN TUSD_ARCH="${TARGETARCH}" && \
     if [ "$TUSD_ARCH" = "amd64" ]; then TUSD_ARCH="amd64"; \
     elif [ "$TUSD_ARCH" = "arm64" ]; then TUSD_ARCH="arm64"; \
