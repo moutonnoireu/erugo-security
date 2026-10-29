@@ -1,3 +1,49 @@
+# erugo-security
+
+> [!IMPORTANT]
+> **erugo-security** is a security-focused fork of [Erugo](https://github.com/ErugoOSS/Erugo).
+> It bundles security fixes that are still pending upstream, keeps the base image current, and rebuilds it every week.
+> It is not affiliated with the original Erugo project: please report issues here, not upstream.
+
+## Why this fork
+
+- **Security fixes included**: 20+ community fixes (auth, path traversal, XSS, mass assignment…), see [SECURITY-PATCHES.md](SECURITY-PATCHES.md).
+- **Maintained base image**: upstream builds on `alpine:3.19`, which is end of life. This fork uses `alpine:3.24`.
+- **Scanned and rebuilt weekly**: every image is scanned with Trivy and rebuilt from scratch each Monday, so PHP and Alpine fixes land without waiting for a commit.
+- **Drop-in compatible**: same `storage` volume, same database. Tracked upstream release: [`.upstream-version`](.upstream-version).
+
+## Use the image
+
+```yaml
+services:
+  app:
+    image: ghcr.io/moutonnoireu/erugo-security:latest
+    restart: unless-stopped
+    volumes:
+      - ./erugo-storage:/var/www/html/storage
+    ports:
+      - "9998:80"
+```
+
+Tags: `latest`, and the upstream version it is based on (e.g. `0.2.15`).
+
+## Migrate from `wardy784/erugo`
+
+1. Back up your `storage` folder (and your database if it is external).
+2. Replace `wardy784/erugo:latest` with `ghcr.io/moutonnoireu/erugo-security:latest` in your compose file.
+3. `docker compose pull && docker compose up -d`
+4. Check: `docker compose exec app php -v`
+
+To roll back, switch the image back and restart.
+
+## Reporting a vulnerability
+
+Please do not open a public issue. Use [Report a vulnerability](https://github.com/moutonnoireu/erugo-security/security/advisories/new) instead.
+
+---
+
+*The original Erugo README follows.*
+
 [![Docker Pulls](https://img.shields.io/docker/pulls/wardy784/erugo)](https://hub.docker.com/r/wardy784/erugo) ![GitHub Repo stars](https://img.shields.io/github/stars/deanward/erugo) ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/deanward/erugo) ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/deanward/erugo) ![GitHub commits since latest release](https://img.shields.io/github/commits-since/deanward/erugo/latest) [![license](https://img.shields.io/github/license/dec0dOS/amazing-github-template.svg)](LICENSE)
 
 [![Discord Banner 2](https://img.shields.io/badge/Join%20Us%20On%20Discord-8A2BE2)](https://discord.gg/M74X2wmqY8)
