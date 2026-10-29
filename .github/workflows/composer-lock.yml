@@ -69,12 +69,24 @@ jobs:
 
       - name: Boot check and tests
         run: |
-          composer install --no-interaction --prefer-dist
+          # Run each command; on failure, surface its last lines as an annotation
+          run() {
+            echo "::group::$*"
+            if ! "$@" > /tmp/out.txt 2>&1; then
+              cat /tmp/out.txt
+              MSG=$(tail -n 40 /tmp/out.txt | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
+              echo "::error title=Failed: $*::$MSG"
+              exit 1
+            fi
+            cat /tmp/out.txt
+            echo "::endgroup::"
+          }
+          run composer install --no-interaction --prefer-dist
           cp .env.example .env
           touch database/database.sqlite
-          php artisan key:generate --force
-          php artisan jwt:secret --force
-          php artisan --version
-          php artisan migrate --force
-          php artisan route:list > /dev/null
-          php artisan test
+          run php artisan key:generate --force
+          run php artisan jwt:secret --force
+          run php artisan --version
+          run php artisan migrate --force
+          run php artisan route:list
+          run php artisan test
