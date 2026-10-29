@@ -67,6 +67,14 @@ jobs:
           git commit -m "chore(deps): update composer.lock (${{ steps.changed.outputs.pkgs }})" composer.lock
           git push
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Build front-end assets (needed by the HTTP tests)
+        run: npm ci && npx vite build
+
       - name: Boot check and tests
         run: |
           # Run each command; on failure, surface its last lines as an annotation
