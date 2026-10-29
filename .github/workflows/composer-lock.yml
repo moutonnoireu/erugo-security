@@ -1,0 +1,102 @@
+name: Update composer.lock
+
+# Push a branch named deps/** with a changed constraint in composer.json:
+# this workflow resolves the new versions, commits composer.lock back to the
+# branch, then checks that the application still boots and the tests pass.
+on:
+  push:
+    branches: ["deps/**"]
+    paths: [composer.json, .github/workflows/composer-lock.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: composer-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo_sqlite, gd, intl, zip, mbstring, bcmath, curl, openssl, fileinfo
+          tools: composer:v2
+
+      - name: Resolve changed packages
+        id: changed
+        run: |
+          git show origin/php-fix:composer.json > /tmp/base.json
+          # Packages added, changed or removed in require / require-dev
+          PKGS=$(jq -rn --slurpfile a /tmp/base.json --slurpfile b composer.json '
+            [ ("require","require-dev") as $s
+              | (($a[0][$s] // {}) | keys) + (($b[0][$s] // {}) | keys) | .[] as $k
+              | select(($a[0][$s] // {})[$k] != ($b[0][$s] // {})[$k]) | $k ]
+            | unique | map(select(. != "php" and (startswith("ext-") | not))) | join(" ")')
+          echo "Changed: ${PKGS:-none}"
+          echo "pkgs=$PKGS" >> "$GITHUB_OUTPUT"
+
+      - name: composer update
+        run: |
+          if [ -n "${{ steps.changed.outputs.pkgs }}" ]; then
+            # Targeted update first; if another root package blocks it
+            # (e.g. a major framework upgrade), fall back to a full update.
+            composer update ${{ steps.changed.outputs.pkgs }} --with-all-dependencies --no-interaction --no-scripts \
+              || { echo "::warning::Targeted update failed, running a full update"; \
+                   composer update --with-all-dependencies --no-interaction --no-scripts; }
+          else
+            composer update --lock --no-interaction --no-scripts
+          fi
+          composer validate --no-check-publish
+          composer audit --locked || true
+
+      - name: Commit composer.lock
+        run: |
+          if git diff --quiet composer.lock; then
+            echo "composer.lock unchanged"; exit 0
+          fi
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git commit -m "chore(deps): update composer.lock (${{ steps.changed.outputs.pkgs }})" composer.lock
+          git push
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Build front-end assets (needed by the HTTP tests)
+        run: npm ci && npx vite build
+
+      - name: Boot check and tests
+        run: |
+          # Run each command; on failure, surface its last lines as an annotation
+          run() {
+            echo "::group::$*"
+            if ! "$@" > /tmp/out.txt 2>&1; then
+              cat /tmp/out.txt
+              MSG=$(tail -n 40 /tmp/out.txt | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
+              echo "::error title=Failed: $*::$MSG"
+              exit 1
+            fi
+            cat /tmp/out.txt
+            echo "::endgroup::"
+          }
+          run composer install --no-interaction --prefer-dist
+          cp .env.example .env
+          touch database/database.sqlite
+          run php artisan key:generate --force
+          run php artisan jwt:secret --force
+          run php artisan --version
+          run php artisan migrate --force
+          run php artisan db:seed --force
+          run php artisan route:list
+          # phpunit.xml sets DB_DATABASE=testing (no such SQLite file); point it at the migrated DB
+          DB_DATABASE="$PWD/database/database.sqlite" run php artisan test
