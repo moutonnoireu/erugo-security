@@ -34,10 +34,12 @@ jobs:
         id: changed
         run: |
           git show origin/php-fix:composer.json > /tmp/base.json
+          # Packages added, changed or removed in require / require-dev
           PKGS=$(jq -rn --slurpfile a /tmp/base.json --slurpfile b composer.json '
             [ ("require","require-dev") as $s
-              | ($b[0][$s] // {}) | to_entries[]
-              | select(($a[0][$s] // {})[.key] != .value) | .key ] | unique | join(" ")')
+              | (($a[0][$s] // {}) | keys) + (($b[0][$s] // {}) | keys) | .[] as $k
+              | select(($a[0][$s] // {})[$k] != ($b[0][$s] // {})[$k]) | $k ]
+            | unique | map(select(. != "php" and (startswith("ext-") | not))) | join(" ")')
           echo "Changed: ${PKGS:-none}"
           echo "pkgs=$PKGS" >> "$GITHUB_OUTPUT"
 
