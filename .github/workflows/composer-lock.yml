@@ -89,4 +89,5 @@ jobs:
           run php artisan --version
           run php artisan migrate --force
           run php artisan route:list
-          run php artisan test
+          # phpunit.xml sets DB_DATABASE=testing (no such SQLite file); point it at the migrated DB
+          DB_DATABASE="$PWD/database/database.sqlite" run php artisan test
