@@ -58,7 +58,17 @@ jobs:
           image-ref: erugo-scan:ci
           severity: CRITICAL
           ignore-unfixed: true
-          exit-code: '1'
+          format: json
+          output: trivy.json
+          exit-code: '0'
+      - name: Report Trivy findings
+        run: |
+          # One annotation per finding, so failures are readable from the run summary
+          jq -r '.Results[]? | .Target as $t | .Vulnerabilities[]? |
+            "::error title=\(.VulnerabilityID) (\(.Severity))::\(.PkgName) \(.InstalledVersion) -> \(.FixedVersion) in \($t)"' trivy.json
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy.json)
+          echo "Fixable CRITICAL vulnerabilities: $COUNT"
+          [ "$COUNT" -eq 0 ]
       - name: Publish multi-arch
         uses: docker/build-push-action@v6
         with:
