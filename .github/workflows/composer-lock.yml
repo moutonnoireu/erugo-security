@@ -1,0 +1,74 @@
+name: Update composer.lock
+
+# Push a branch named deps/** with a changed constraint in composer.json:
+# this workflow resolves the new versions, commits composer.lock back to the
+# branch, then checks that the application still boots and the tests pass.
+on:
+  push:
+    branches: ["deps/**"]
+    paths: [composer.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: composer-lock-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo_sqlite, gd, intl, zip, mbstring, bcmath, curl, openssl, fileinfo
+          tools: composer:v2
+
+      - name: Resolve changed packages
+        id: changed
+        run: |
+          git show origin/php-fix:composer.json > /tmp/base.json
+          PKGS=$(jq -rn --slurpfile a /tmp/base.json --slurpfile b composer.json '
+            [ ("require","require-dev") as $s
+              | ($b[0][$s] // {}) | to_entries[]
+              | select(($a[0][$s] // {})[.key] != .value) | .key ] | unique | join(" ")')
+          echo "Changed: ${PKGS:-none}"
+          echo "pkgs=$PKGS" >> "$GITHUB_OUTPUT"
+
+      - name: composer update
+        run: |
+          if [ -n "${{ steps.changed.outputs.pkgs }}" ]; then
+            composer update ${{ steps.changed.outputs.pkgs }} --with-all-dependencies --no-interaction --no-scripts
+          else
+            composer update --lock --no-interaction --no-scripts
+          fi
+          composer validate --no-check-publish
+          composer audit --locked || true
+
+      - name: Commit composer.lock
+        run: |
+          if git diff --quiet composer.lock; then
+            echo "composer.lock unchanged"; exit 0
+          fi
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git commit -m "chore(deps): update composer.lock (${{ steps.changed.outputs.pkgs }})" composer.lock
+          git push
+
+      - name: Boot check and tests
+        run: |
+          composer install --no-interaction --prefer-dist
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate --force
+          php artisan jwt:secret --force
+          php artisan --version
+          php artisan migrate --force
+          php artisan route:list > /dev/null
+          php artisan test
