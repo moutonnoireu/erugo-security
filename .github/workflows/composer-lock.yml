@@ -6,7 +6,7 @@ name: Update composer.lock
 on:
   push:
     branches: ["deps/**"]
-    paths: [composer.json]
+    paths: [composer.json, .github/workflows/composer-lock.yml]
   workflow_dispatch:
 
 permissions:
@@ -44,7 +44,11 @@ jobs:
       - name: composer update
         run: |
           if [ -n "${{ steps.changed.outputs.pkgs }}" ]; then
-            composer update ${{ steps.changed.outputs.pkgs }} --with-all-dependencies --no-interaction --no-scripts
+            # Targeted update first; if another root package blocks it
+            # (e.g. a major framework upgrade), fall back to a full update.
+            composer update ${{ steps.changed.outputs.pkgs }} --with-all-dependencies --no-interaction --no-scripts \
+              || { echo "::warning::Targeted update failed, running a full update"; \
+                   composer update --with-all-dependencies --no-interaction --no-scripts; }
           else
             composer update --lock --no-interaction --no-scripts
           fi
