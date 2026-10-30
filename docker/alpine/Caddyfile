@@ -1,5 +1,17 @@
 {
-	frankenphp
+	frankenphp {
+		# downloads are streamed by PHP and hold a thread: add threads under load
+		max_threads auto
+		# a request waiting longer than this for a free PHP thread gets a 504
+		max_wait_time 30s
+	}
+	servers {
+		timeouts {
+			# slow clients cannot hold connections open (downloads are not limited)
+			read_header 15s
+			idle 2m
+		}
+	}
 	# no admin API, no automatic certificates (TLS is terminated by your reverse proxy)
 	admin off
 	auto_https off
