@@ -6,6 +6,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use App\Models\Share;
 use Illuminate\Support\Facades\Log;
+use App\Services\StorageEncryption;
 
 class CreateShareZip implements ShouldQueue
 {
@@ -39,16 +40,27 @@ class CreateShareZip implements ShouldQueue
       return;
     }
 
+    $encryption = app(StorageEncryption::class);
+    if ($encryption->isMisconfigured()) {
+      Log::critical('Encryption of stored files is enabled but STORAGE_ENCRYPTION_KEY is missing or invalid: share ' . $this->share->id . ' is stored in plain text.');
+    }
+    $sourcePath = storage_path('app/shares/' . $user_folder . '/' . $this->share->long_id);
+
     //if there is only one file just leave it alone and set the status to ready
     if ($this->share->file_count == 1) {
+      if ($encryption->isEnabled()) {
+        $this->encryptDirectory($encryption, $sourcePath);
+      }
       $this->share->status = 'ready';
       $this->share->save();
       return;
     }
 
     try {
-      $sourcePath = storage_path('app/shares/' . $user_folder . '/' . $this->share->long_id);
       $this->createZipFromDirectory($sourcePath, $zipPath);
+      if ($encryption->isEnabled()) {
+        $this->encryptPath($encryption, $zipPath);
+      }
       $this->share->status = 'ready';
       $this->share->save();
       $this->removeDirectory($sourcePath);
@@ -106,6 +118,32 @@ class CreateShareZip implements ShouldQueue
     }
 
     return true;
+  }
+
+  /**
+   * Encrypt at rest. On failure the file stays readable in plain text and
+   * `php artisan encrypt-existing-files` can be run later.
+   */
+  private function encryptPath(StorageEncryption $encryption, string $path): void
+  {
+    try {
+      $encryption->encryptFile($path);
+    } catch (\Throwable $e) {
+      Log::critical('Could not encrypt share file ' . $path . ': ' . $e->getMessage());
+    }
+  }
+
+  private function encryptDirectory(StorageEncryption $encryption, string $dir): void
+  {
+    if (!is_dir($dir)) {
+      return;
+    }
+    $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+      if ($file->isFile()) {
+        $this->encryptPath($encryption, $file->getPathname());
+      }
+    }
   }
 
   private function removeDirectory($dir)

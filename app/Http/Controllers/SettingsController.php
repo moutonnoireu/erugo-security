@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Utils\FileHelper;
 use App\Services\SettingsService;
 use App\Services\IpAllowlist;
+use App\Services\StorageEncryption;
 
 class SettingsController extends Controller
 {
@@ -48,6 +49,16 @@ class SettingsController extends Controller
         $allowlistError = $this->validateIpAllowlist($request);
         if ($allowlistError !== null) {
             return $allowlistError;
+        }
+
+        $enablesEncryption = collect($request->settings)
+            ->contains(fn ($s) => $s['key'] === StorageEncryption::SETTING_ENABLED && ($s['value'] ?? null) === 'true');
+        if ($enablesEncryption && !app(StorageEncryption::class)->hasKey()) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'storage_key_missing',
+                'message' => 'Set the STORAGE_ENCRYPTION_KEY environment variable before enabling encryption.',
+            ], 422);
         }
 
         $errors = [];
@@ -142,7 +153,10 @@ class SettingsController extends Controller
     {
         return response()->json([
             'status' => 'success',
-            'data' => ['ip' => $request->ip()],
+            'data' => [
+                'ip' => $request->ip(),
+                'storage_encryption_key_configured' => app(StorageEncryption::class)->hasKey(),
+            ],
         ]);
     }
 

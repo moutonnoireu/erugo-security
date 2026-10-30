@@ -67,6 +67,7 @@ RUN apk add --no-cache \
     php83-dom \
     php83-tokenizer \
     php83-fileinfo \
+    php83-sodium \
     tzdata \
     libcap \
     zip \

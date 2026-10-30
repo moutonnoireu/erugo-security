@@ -111,6 +111,14 @@ return [
 
     'key' => env('APP_KEY'),
 
+    /*
+    | Key for the optional encryption at rest of shared files (32 random bytes,
+    | base64). Kept out of the storage volume on purpose: without it, the
+    | encrypted files cannot be read. Generate one with
+    | `php artisan generate-storage-key`.
+    */
+    'storage_encryption_key' => env('STORAGE_ENCRYPTION_KEY'),
+
     'previous_keys' => [
         ...array_filter(
             explode(',', env('APP_PREVIOUS_KEYS', ''))

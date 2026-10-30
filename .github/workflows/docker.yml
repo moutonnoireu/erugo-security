@@ -48,7 +48,7 @@ jobs:
         run: |
           docker run --rm --entrypoint php erugo-scan:ci -v
           MODULES=$(docker run --rm --entrypoint php erugo-scan:ci -m)
-          for ext in pdo_sqlite pdo_mysql pdo_pgsql gd intl zip mbstring curl openssl; do
+          for ext in pdo_sqlite pdo_mysql pdo_pgsql gd intl zip mbstring curl openssl sodium; do
             echo "$MODULES" | grep -qix "$ext" \
               || { echo "::error::Missing PHP extension: $ext"; exit 1; }
           done

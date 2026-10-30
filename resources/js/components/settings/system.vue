@@ -32,7 +32,7 @@ import {
   createBackup,
   downloadBackup,
   deleteBackup,
-  getClientIp
+  getSecurityStatus
 } from '../../api'
 import HelpTip from '../helpTip.vue'
 
@@ -78,14 +78,19 @@ const settings = ref({
   login_ip_allowlist_enabled: false,
   login_ip_allowlist: '',
   altcha_enabled: false,
-  altcha_max_number: 100000
+  altcha_max_number: 100000,
+  storage_encryption_enabled: false
 })
 
-// IP address of this browser as seen by the server (for the sign-in allowlist)
+// IP address of this browser as seen by the server (for the sign-in allowlist),
+// and whether STORAGE_ENCRYPTION_KEY is configured
 const clientIp = ref('')
+const storageKeyConfigured = ref(false)
 const loadClientIp = async () => {
   try {
-    clientIp.value = await getClientIp()
+    const status = await getSecurityStatus()
+    clientIp.value = status.ip
+    storageKeyConfigured.value = status.storage_encryption_key_configured
   } catch (error) {
     clientIp.value = ''
   }
@@ -420,6 +425,8 @@ const saveSettings = async () => {
     saving.value = false
     if (error.code === 'ip_allowlist_lockout') {
       toast.error(t.value('settings.system.security.lockout_error', { ip: error.data?.ip ?? '' }))
+    } else if (error.code === 'storage_key_missing') {
+      toast.error(t.value('settings.system.security.encryption_key_missing'))
     } else if (error.code === 'ip_allowlist_invalid') {
       toast.error(t.value('settings.system.security.invalid_entries', { entries: (error.data?.invalid ?? []).join(', ') }))
     } else {
@@ -1276,6 +1283,33 @@ const handleDeleteAuthProvider = async (id) => {
                   />
                   <p class="help-text">{{ $t('settings.system.security.altcha_difficulty_help') }}</p>
                 </div>
+
+                <hr class="my-4" />
+
+                <h5 id="storage_encryption_section" class="mb-3">{{ $t('settings.system.security.encryption') }}</h5>
+                <p class="help-text">{{ $t('settings.system.security.encryption_description') }}</p>
+                <p class="help-text">
+                  <strong>
+                    {{
+                      storageKeyConfigured
+                        ? $t('settings.system.security.encryption_key_ok')
+                        : $t('settings.system.security.encryption_key_absent')
+                    }}
+                  </strong>
+                </p>
+
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input
+                      type="checkbox"
+                      id="storage_encryption_enabled"
+                      v-model="settings.storage_encryption_enabled"
+                      :disabled="!storageKeyConfigured && !settings.storage_encryption_enabled"
+                    />
+                    <label for="storage_encryption_enabled">{{ $t('settings.system.security.encryption_enabled') }}</label>
+                  </div>
+                </div>
+                <p class="help-text">{{ $t('settings.system.security.encryption_help') }}</p>
               </div>
             </div>
 
