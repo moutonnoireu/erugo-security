@@ -140,6 +140,17 @@ if [ -z "$DB_CONNECTION" ]; then
     export DB_DATABASE=./storage/app/private/database.sqlite
 fi
 
+# Commands run with `docker exec` (recovery commands, tinker) do not inherit
+# what this script derived: write it to a private file read by bootstrap/app.php
+(
+    umask 077
+    for var in APP_KEY JWT_SECRET DB_CONNECTION DB_DATABASE APP_URL ASSET_URL APP_VERSION; do
+        eval "value=\${$var-}"
+        [ -n "$value" ] && printf '%s="%s"\n' "$var" "$(printf '%s' "$value" | sed 's/["\\$]/\\&/g')"
+    done > /tmp/erugo.env
+)
+chmod 600 /tmp/erugo.env
+
 # Always run migrations
 echo "Running migrations..."
 php artisan migrate --force
