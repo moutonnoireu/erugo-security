@@ -62,6 +62,10 @@ Route::group([], function ($router) {
         Route::post('mfa/verify', [TwoFactorController::class, 'verifyLogin'])->name('auth.mfa.verify')->middleware('throttle:10,1');
         Route::post('mfa/passkey/options', [TwoFactorController::class, 'passkeyLoginOptions'])->name('auth.mfa.passkeyOptions')->middleware('throttle:10,1');
         Route::post('mfa/passkey', [TwoFactorController::class, 'passkeyLogin'])->name('auth.mfa.passkey')->middleware('throttle:10,1');
+        //passwordless sign-in with a passkey (when enabled by an admin)
+        Route::post('passkey/options', [TwoFactorController::class, 'passwordlessOptions'])->name('auth.passkey.options')->middleware('throttle:20,1');
+        Route::post('passkey/login', [TwoFactorController::class, 'passwordlessLogin'])->name('auth.passkey.login')->middleware('throttle:10,1');
+
         //mandatory first-factor setup (admin policy)
         Route::post('mfa/enrol/totp/setup', [TwoFactorController::class, 'enrolTotpSetup'])->name('auth.mfa.enrolTotpSetup')->middleware('throttle:10,1');
         Route::post('mfa/enrol/totp/confirm', [TwoFactorController::class, 'enrolTotpConfirm'])->name('auth.mfa.enrolTotpConfirm')->middleware('throttle:10,1');

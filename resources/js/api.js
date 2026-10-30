@@ -510,6 +510,26 @@ export const verifyMfaPasskey = async (mfaToken, credential) => {
   return buildAuthSuccessData(await jsonOrThrow(response))
 }
 
+// ----- passwordless sign-in with a passkey -----
+
+export const getPasswordlessOptions = async () => {
+  const response = await fetch(`${apiUrl}/api/auth/passkey/options`, {
+    method: 'POST',
+    headers: { ...addJsonHeader() }
+  })
+  return (await jsonOrThrow(response)).data
+}
+
+export const passwordlessLogin = async (token, credential) => {
+  const response = await fetch(`${apiUrl}/api/auth/passkey/login`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { ...addJsonHeader() },
+    body: JSON.stringify({ token, credential })
+  })
+  return buildAuthSuccessData(await jsonOrThrow(response))
+}
+
 // ----- mandatory two-factor setup at sign-in (admin policy) -----
 
 const enrolRequest = async (path, body) => {

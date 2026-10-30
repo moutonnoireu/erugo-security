@@ -34,6 +34,8 @@ class RestrictSignInToAllowedIps
         'auth.mfa.enrolTotpConfirm',
         'auth.mfa.enrolPasskeyOptions',
         'auth.mfa.enrolPasskey',
+        'auth.passkey.options',
+        'auth.passkey.login',
         'social.provider.login',
         'social.provider.callback',
         'social.provider.link',

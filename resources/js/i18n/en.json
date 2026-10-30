@@ -101,7 +101,9 @@
       "enrol_other_method": "Choose another method",
       "enrol_continue": "I have saved my codes, continue",
       "enrol_expired": "Setup expired, please sign in again."
-    }
+    },
+    "sign_in_with_passkey": "Sign in with a passkey",
+    "passkey_login_failed": "This passkey could not be used to sign in."
   },
   "button": {
     "reverse_share_invite": "Create a reverse share request",
@@ -927,7 +929,9 @@
         "mfa_policy_none": "Nobody (each user chooses)",
         "mfa_policy_admins": "Administrators",
         "mfa_policy_everyone": "Every user",
-        "mfa_policy_help": "Users concerned who have no second factor must set one up at their next password sign-in, and their current session is not renewed. Guests and sign-ins through an external provider (which has its own MFA) are not affected."
+        "mfa_policy_help": "Users concerned who have no second factor must set one up at their next password sign-in, and their current session is not renewed. Guests and sign-ins through an external provider (which has its own MFA) are not affected.",
+        "passkey_login": "Allow sign-in with a passkey only (no password)",
+        "passkey_login_help": "Users who added a passkey in their account can sign in with it alone: the device asks for their fingerprint, face or PIN, which counts as two factors. Passkeys added before may not support this on every device; adding a new one fixes it."
       }
     },
     "system_auth_provider_info_link": "About {name}",

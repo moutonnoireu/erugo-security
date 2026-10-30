@@ -80,7 +80,8 @@ const settings = ref({
   altcha_enabled: false,
   altcha_max_number: 100000,
   storage_encryption_enabled: false,
-  mfa_required_for: 'none'
+  mfa_required_for: 'none',
+  passkey_login_enabled: false
 })
 
 // IP address of this browser as seen by the server (for the sign-in allowlist),
@@ -1296,6 +1297,14 @@ const handleDeleteAuthProvider = async (id) => {
                     <option value="everyone">{{ $t('settings.system.security.mfa_policy_everyone') }}</option>
                   </select>
                   <p class="help-text">{{ $t('settings.system.security.mfa_policy_help') }}</p>
+                </div>
+
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="passkey_login_enabled" v-model="settings.passkey_login_enabled" />
+                    <label for="passkey_login_enabled">{{ $t('settings.system.security.passkey_login') }}</label>
+                  </div>
+                  <p class="help-text">{{ $t('settings.system.security.passkey_login_help') }}</p>
                 </div>
 
                 <hr class="my-4" />

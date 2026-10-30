@@ -101,7 +101,9 @@
       "enrol_other_method": "Choisir une autre méthode",
       "enrol_continue": "J'ai enregistré mes codes, continuer",
       "enrol_expired": "La configuration a expiré, veuillez vous reconnecter."
-    }
+    },
+    "sign_in_with_passkey": "Se connecter avec une clé d'accès",
+    "passkey_login_failed": "Cette clé d'accès ne permet pas de se connecter."
   },
   "button": {
     "reverse_share_invite": "Créer une demande de partage inversé",
@@ -906,7 +908,9 @@
         "mfa_policy_none": "Personne (chacun choisit)",
         "mfa_policy_admins": "Les administrateurs",
         "mfa_policy_everyone": "Tous les utilisateurs",
-        "mfa_policy_help": "Les utilisateurs concernés sans second facteur devront en configurer un à leur prochaine connexion par mot de passe, et leur session en cours n'est pas renouvelée. Les invités et les connexions via un fournisseur externe (qui gère sa propre MFA) ne sont pas concernés."
+        "mfa_policy_help": "Les utilisateurs concernés sans second facteur devront en configurer un à leur prochaine connexion par mot de passe, et leur session en cours n'est pas renouvelée. Les invités et les connexions via un fournisseur externe (qui gère sa propre MFA) ne sont pas concernés.",
+        "passkey_login": "Autoriser la connexion par clé d'accès seule (sans mot de passe)",
+        "passkey_login_help": "Les utilisateurs ayant ajouté une clé d'accès à leur compte peuvent se connecter avec elle seule : l'appareil demande leur empreinte, leur visage ou leur code PIN, ce qui vaut deux facteurs. Une clé ajoutée auparavant peut ne pas le permettre sur tous les appareils ; en ajouter une nouvelle règle le problème."
       }
     },
     "system_auth_provider_info_link": "À propos",

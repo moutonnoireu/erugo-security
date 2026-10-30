@@ -118,7 +118,8 @@ class AuthController extends Controller
 
         // Password sessions of users who must have 2FA but have none are not renewed:
         // they sign in again and go through the mandatory setup.
-        $amr = rescue(fn () => Auth::getPayload()->get('amr'), null, false) === 'sso' ? 'sso' : 'pwd';
+        $amr = rescue(fn () => Auth::getPayload()->get('amr'), null, false);
+        $amr = in_array($amr, ['sso', 'passkey'], true) ? $amr : 'pwd';
         $twoFactor = app(TwoFactor::class);
         if ($amr !== 'sso' && $twoFactor->isRequiredFor($user) && !$twoFactor->isEnabledFor($user)) {
             return response()->json([
