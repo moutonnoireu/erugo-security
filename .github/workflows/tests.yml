@@ -85,6 +85,23 @@ jobs:
           for ext in pdo_sqlite pdo_mysql pdo_pgsql gd intl zip mbstring curl openssl sodium; do
             echo "$MODULES" | grep -qix "$ext" || { echo "::error::Missing PHP extension: $ext"; exit 1; }
           done
+      - name: Trivy scan (fail on fixable CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: erugo-pr:ci
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy.json
+          exit-code: '0'
+      - name: Report Trivy findings
+        run: |
+          # One annotation per finding, so failures are readable from the run summary
+          jq -r '.Results[]? | .Target as $t | .Vulnerabilities[]? |
+            "::error title=\(.VulnerabilityID) (\(.Severity))::\(.PkgName) \(.InstalledVersion) -> \(.FixedVersion) in \($t)"' trivy.json
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy.json)
+          echo "Fixable CRITICAL vulnerabilities: $COUNT"
+          [ "$COUNT" -eq 0 ]
       - name: Boot with the default settings (existing deployments)
         run: |
           # same layout as the reference compose file: started as root, port 80, storage volume
