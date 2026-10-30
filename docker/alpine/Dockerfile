@@ -83,19 +83,23 @@ RUN apk add --no-cache \
     && ln -sfn /etc/php${PHP_VERSION} /etc/php \
     && rm -rf /var/cache/apk/*
 
-# Download and install tusd for the correct architecture
+# Download and install tusd for the correct architecture.
+# tusd publishes no checksum file: the SHA-256 of each archive is pinned here,
+# update both when bumping TUSD_VERSION.
 ENV TUSD_VERSION=2.10.1
-RUN TUSD_ARCH="${TARGETARCH}" && \
-    if [ "$TUSD_ARCH" = "amd64" ]; then TUSD_ARCH="amd64"; \
-    elif [ "$TUSD_ARCH" = "arm64" ]; then TUSD_ARCH="arm64"; \
-    else echo "Unsupported architecture: $TARGETARCH" && exit 1; fi && \
-    curl -fsSL -o /tmp/tusd.tar.gz "https://github.com/tus/tusd/releases/download/v${TUSD_VERSION}/tusd_linux_${TUSD_ARCH}.tar.gz" && \
-    curl -fsSL -o /tmp/tusd-checksums.txt "https://github.com/tus/tusd/releases/download/v${TUSD_VERSION}/checksums.txt" && \
-    (cd /tmp && grep " tusd_linux_${TUSD_ARCH}.tar.gz\$" tusd-checksums.txt | sed 's/ \+/  /' | sed "s|tusd_linux_${TUSD_ARCH}.tar.gz|tusd.tar.gz|" | sha256sum -c -) && \
+ARG TUSD_SHA256_AMD64=e8c8d7738275d2d9377db953aecbc242262d3620e77fbd3c1491361d9cea6ac8
+ARG TUSD_SHA256_ARM64=134e575a6524698b54d989958c680f0a4ec243d9622c1926e30e27c2a86e4752
+RUN case "${TARGETARCH}" in \
+      amd64) TUSD_SHA256="${TUSD_SHA256_AMD64}" ;; \
+      arm64) TUSD_SHA256="${TUSD_SHA256_ARM64}" ;; \
+      *) echo "Unsupported architecture: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -fsSL -o /tmp/tusd.tar.gz "https://github.com/tus/tusd/releases/download/v${TUSD_VERSION}/tusd_linux_${TARGETARCH}.tar.gz" && \
+    echo "${TUSD_SHA256}  /tmp/tusd.tar.gz" | sha256sum -c - && \
     tar -xzf /tmp/tusd.tar.gz -C /tmp && \
-    mv /tmp/tusd_linux_${TUSD_ARCH}/tusd /usr/local/bin/tusd && \
+    mv /tmp/tusd_linux_${TARGETARCH}/tusd /usr/local/bin/tusd && \
     chmod +x /usr/local/bin/tusd && \
-    rm -rf /tmp/tusd.tar.gz /tmp/tusd-checksums.txt /tmp/tusd_linux_${TUSD_ARCH}
+    rm -rf /tmp/tusd.tar.gz /tmp/tusd_linux_${TARGETARCH}
 
 # Create necessary directories
 RUN mkdir -p /run/php /var/www/html/public /etc/php/php-fpm.d /etc/caddy
