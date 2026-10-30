@@ -342,19 +342,22 @@ export const resetPassword = async (token, email, password, password_confirmatio
   return data
 }
 
-export const forgotPassword = async (email) => {
+export const forgotPassword = async (email, altcha = null) => {
   const response = await fetch(`${apiUrl}/api/auth/forgot-password`, {
     method: 'POST',
     headers: {
       ...addJsonHeader()
     },
     body: JSON.stringify({
-      email
+      email,
+      altcha
     })
   })
   const data = await response.json()
   if (!response.ok) {
-    throw new Error(data.message)
+    const error = new Error(data.message)
+    error.code = data.code
+    throw error
   }
   return data
 }
@@ -374,7 +377,7 @@ export const getRegistrationSettings = async () => {
   return data.data
 }
 
-export const registerUser = async (name, email, password, password_confirmation) => {
+export const registerUser = async (name, email, password, password_confirmation, altcha = null) => {
   const response = await fetch(`${apiUrl}/api/auth/register`, {
     method: 'POST',
     headers: {
@@ -384,13 +387,15 @@ export const registerUser = async (name, email, password, password_confirmation)
       name,
       email,
       password,
-      password_confirmation
+      password_confirmation,
+      altcha
     })
   })
   const data = await response.json()
   if (!response.ok) {
     const error = new Error(data.message)
     error.errors = data.data?.errors
+    error.code = data.code
     throw error
   }
   return data
@@ -414,24 +419,27 @@ export const verifyEmail = async (email, code) => {
   return data
 }
 
-export const resendVerificationCode = async (email) => {
+export const resendVerificationCode = async (email, altcha = null) => {
   const response = await fetch(`${apiUrl}/api/auth/resend-verification`, {
     method: 'POST',
     headers: {
       ...addJsonHeader()
     },
     body: JSON.stringify({
-      email
+      email,
+      altcha
     })
   })
   const data = await response.json()
   if (!response.ok) {
-    throw new Error(data.message)
+    const error = new Error(data.message)
+    error.code = data.code
+    throw error
   }
   return data
 }
 
-export const login = async (email, password) => {
+export const login = async (email, password, altcha = null) => {
   const response = await fetch(`${apiUrl}/api/auth/login`, {
     method: 'POST',
     credentials: 'include',
@@ -440,7 +448,8 @@ export const login = async (email, password) => {
     },
     body: JSON.stringify({
       email,
-      password
+      password,
+      altcha
     })
   })
   const data = await response.json()

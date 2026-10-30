@@ -18,7 +18,14 @@ export default defineConfig({
       input: ['resources/js/app.js'],
       refresh: true
     }),
-    vue()
+    vue({
+      template: {
+        compilerOptions: {
+          // ALTCHA ships as a web component
+          isCustomElement: (tag) => tag === 'altcha-widget'
+        }
+      }
+    })
   ],
   css: {
     postcss: {

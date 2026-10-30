@@ -76,7 +76,9 @@ const settings = ref({
   self_registration_allow_any_domain: true,
   self_registration_allowed_domains: '',
   login_ip_allowlist_enabled: false,
-  login_ip_allowlist: ''
+  login_ip_allowlist: '',
+  altcha_enabled: false,
+  altcha_max_number: 100000
 })
 
 // IP address of this browser as seen by the server (for the sign-in allowlist)
@@ -1249,6 +1251,31 @@ const handleDeleteAuthProvider = async (id) => {
                 </div>
 
                 <p class="help-text">{{ $t('settings.system.security.ip_allowlist_proxy_help') }}</p>
+
+                <hr class="my-4" />
+
+                <h5 id="altcha_section" class="mb-3">{{ $t('settings.system.security.altcha') }}</h5>
+                <p class="help-text">{{ $t('settings.system.security.altcha_description') }}</p>
+
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input type="checkbox" id="altcha_enabled" v-model="settings.altcha_enabled" />
+                    <label for="altcha_enabled">{{ $t('settings.system.security.altcha_enabled') }}</label>
+                  </div>
+                </div>
+
+                <div class="setting-group-body-item" v-if="settings.altcha_enabled">
+                  <label for="altcha_max_number">{{ $t('settings.system.security.altcha_difficulty') }}</label>
+                  <input
+                    type="number"
+                    id="altcha_max_number"
+                    v-model="settings.altcha_max_number"
+                    min="1000"
+                    max="10000000"
+                    step="1000"
+                  />
+                  <p class="help-text">{{ $t('settings.system.security.altcha_difficulty_help') }}</p>
+                </div>
               </div>
             </div>
 

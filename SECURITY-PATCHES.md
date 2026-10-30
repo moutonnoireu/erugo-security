@@ -25,6 +25,7 @@ Commit hashes refer to the `php-fix` branch.
 ### Fork-specific fixes
 | Fix | Details |
 |---|---|
+| Unlimited share password guessing | Share download endpoints had no rate limit. Failed password attempts are now limited to 10 per share and IP per 10 minutes. |
 | SMTP credentials readable by any signed-in user | `GET /api/settings/group/system.*` matched the admin-only `system.smtp` group (SMTP password included). Admin-only groups are now filtered out of wildcard reads for non-admins. |
 
 ### Path traversal & file handling
