@@ -1,0 +1,46 @@
+name: Release
+
+# Push a tag such as v0.2.15-sec.1: this creates the GitHub release from the
+# matching CHANGELOG.md section. The image itself is built and published by
+# docker.yml for the same tag.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # Section "## [VERSION]" up to the next "## [" heading
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::No '## [$VERSION]' section in CHANGELOG.md"
+            exit 1
+          fi
+          cat >> notes.md <<EOF
+
+          ## Image
+
+          \`\`\`
+          docker pull ghcr.io/${GITHUB_REPOSITORY_OWNER}/erugo-security:${VERSION}
+          \`\`\`
+          EOF
+          sed -i 's/^          //' notes.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag

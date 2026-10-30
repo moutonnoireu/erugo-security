@@ -35,6 +35,16 @@ jobs:
       - name: Composer install
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      # Fail on known vulnerabilities in PHP dependencies (Dependabot cannot fix
+      # those held back by another package's constraint)
+      - name: Composer audit
+        if: matrix.php == '8.5'
+        run: |
+          composer audit --locked --format=json > audit.json || true
+          jq -r '.advisories // {} | to_entries[] | .key as $pkg | .value[] |
+            "::error title=\($pkg) \(.cve // .advisoryId)::\(.title) (affected: \(.affectedVersions))"' audit.json
+          [ "$(jq '[.advisories // {} | to_entries[] | .value[]] | length' audit.json)" -eq 0 ]
+
       # Tests run against an in-memory SQLite database (see phpunit.xml)
       - name: PHPUnit
         run: php artisan test
@@ -48,6 +58,8 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
+      - name: npm audit (high and critical)
+        run: npm audit --omit=dev --audit-level=high
       - run: npx vite build
 
   # Build the image from the PR (no push) so Dockerfile changes are checked before merging
@@ -89,3 +101,24 @@ jobs:
           echo "::error title=Erugo did not answer on /api/health::$LOGS"
           docker exec erugo sh -c 'tail -n 40 /var/log/supervisor/*.log 2>/dev/null; tail -n 40 /var/www/html/storage/logs/*.log 2>/dev/null' || true
           exit 1
+      - name: End-to-end sign-in flows (2FA, passkeys)
+        run: |
+          # test account and settings inside the running container
+          docker exec -u erugo erugo php /var/www/html/artisan tinker --execute='
+            $u = new App\Models\User; $u->name = "E2E"; $u->email = "e2e@example.com";
+            $u->password = bcrypt("E2e-Password-123!"); $u->admin = true; $u->active = true;
+            $u->must_change_password = false; $u->save();
+            App\Models\Setting::where("key", "passkey_login_enabled")->update(["value" => "true"]);
+            app(App\Services\SettingsService::class)->clearCache();'
+          npm install --no-save --no-audit --no-fund playwright@1.63.0
+          npx playwright install --with-deps chromium
+          mkdir -p e2e-screenshots
+          BASE_URL=http://localhost:8080 EMAIL=e2e@example.com PASSWORD='E2e-Password-123!' \
+            SCREENSHOTS_DIR=e2e-screenshots node tests/e2e/auth-flows.mjs
+      - name: Keep screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: e2e-screenshots
+          if-no-files-found: ignore
