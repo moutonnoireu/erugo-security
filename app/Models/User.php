@@ -35,6 +35,9 @@ class User extends Authenticatable implements JWTSubject
         'remember_token',
         'email_verification_code',
         'email_verification_code_expires_at',
+        'totp_secret',
+        'totp_last_timestep',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -48,6 +51,9 @@ class User extends Authenticatable implements JWTSubject
             'email_verified_at' => 'datetime',
             'email_verification_code_expires_at' => 'datetime',
             'password' => 'hashed',
+            'totp_secret' => 'encrypted',
+            'totp_enabled_at' => 'datetime',
+            'two_factor_recovery_codes' => 'encrypted',
         ];
     }
 
@@ -64,6 +70,11 @@ class User extends Authenticatable implements JWTSubject
             'must_change_password' => $this->must_change_password,
             'guest' => $this->is_guest == 1 ? true : false
         ];
+    }
+
+    public function passkeys()
+    {
+        return $this->hasMany(UserPasskey::class);
     }
 
     public function invite()

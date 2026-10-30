@@ -65,3 +65,16 @@ Artisan::command('disable-ip-allowlist', function () {
     app(SettingsService::class)->clearCache();
     $this->info('Sign-in IP allowlist disabled.');
 })->purpose('Disable the sign-in IP allowlist');
+
+// Recovery: remove every second factor of a user who lost their device.
+// docker compose exec app php artisan reset-2fa user@example.com
+Artisan::command('reset-2fa {email}', function (string $email) {
+    $user = \App\Models\User::where('email', $email)->first();
+    if (!$user) {
+        $this->error('No user with this email.');
+        return 1;
+    }
+    app(\App\Services\TwoFactor::class)->disableAll($user);
+    $this->info('Two-factor authentication removed for ' . $email . '.');
+    return 0;
+})->purpose('Remove every second factor (authenticator app, passkeys, recovery codes) of a user');

@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, defineExpose, nextTick } from 'vue'
 import { getMyProfile, updateMyProfile, getAvailableAuthProviders, unlinkProvider } from '../../api'
-import { User, CircleX, UserRoundCheck, UserRoundPen, Fingerprint, Link, Unlink } from 'lucide-vue-next'
+import { User, CircleX, UserRoundCheck, UserRoundPen, Fingerprint, Link, Unlink, ShieldCheck } from 'lucide-vue-next'
+import TwoFactorSettings from './TwoFactorSettings.vue'
 import { useToast } from 'vue-toastification'
 import { store } from '../../store'
 
@@ -177,6 +178,12 @@ const handleUnlinkProvider = async (provider) => {
               {{ $t('settings.title.linked_accounts') }}
             </a>
           </li>
+          <li v-if="!store.isGuest()">
+            <a href="#" @click.prevent="handleNavItemClicked('two_factor')">
+              <ShieldCheck />
+              {{ $t('settings.two_factor.title') }}
+            </a>
+          </li>
         </ul>
       </div>
       <div class="col-12 col-md-8 pt-5">
@@ -282,6 +289,18 @@ const handleUnlinkProvider = async (provider) => {
             <div class="section-help">
               <h6>{{ $t('settings.title.linked_accounts') }}</h6>
               <p>{{ $t('settings.account.linked_accounts_description') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-5" v-if="!store.isGuest()">
+          <div class="col-12 col-md-6 pe-0 ps-0 ps-md-3">
+            <TwoFactorSettings />
+          </div>
+          <div class="d-none d-md-block col ps-0">
+            <div class="section-help">
+              <h6>{{ $t('settings.two_factor.title') }}</h6>
+              <p>{{ $t('settings.two_factor.help') }}</p>
             </div>
           </div>
         </div>
