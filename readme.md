@@ -10,6 +10,7 @@
 - **Security fixes included**: 20+ community fixes (auth, path traversal, XSS, mass assignment…), see [SECURITY-PATCHES.md](SECURITY-PATCHES.md).
 - **Maintained base image**: upstream builds on `alpine:3.19` and PHP 8.3; this fork uses [FrankenPHP](https://frankenphp.dev) on Alpine with **PHP 8.5**, production dependencies only (no dev tooling in the image) and checksum-verified downloads.
 - **Unprivileged container**: every process runs as an unprivileged user, the application code is read-only for it, and the container can run with a read-only root filesystem and no capabilities (see [Hardened deployment](#hardened-deployment)). Strict security headers (Content-Security-Policy, `Referrer-Policy: no-referrer`…) are sent by default.
+- **Signed, with an SBOM**: images are signed with cosign and ship an SBOM and build provenance; CI actions are pinned to commit hashes (see [Verify the image](#verify-the-image)).
 - **Scanned and rebuilt weekly**: every image is scanned with Trivy and rebuilt from scratch each Monday, so PHP and Alpine fixes land without waiting for a commit.
 - **Drop-in compatible**: same `storage` volume, same database. Tracked upstream release: [`.upstream-version`](.upstream-version).
 
@@ -24,6 +25,20 @@ services:
       - ./erugo-storage:/var/www/html/storage
     ports:
       - "9998:80"
+```
+
+### Verify the image
+
+Every published image is signed with [cosign](https://github.com/sigstore/cosign) (keyless: the signature is tied to this repository's publishing workflow and recorded in the public Sigstore transparency log), and carries an SBOM and a build provenance attestation.
+
+```sh
+cosign verify ghcr.io/moutonnoireu/erugo-security:latest \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-identity-regexp '^https://github.com/moutonnoireu/erugo-security/\.github/workflows/docker\.yml@'
+
+# software bill of materials (SPDX) and provenance
+docker buildx imagetools inspect ghcr.io/moutonnoireu/erugo-security:latest --format '{{ json .SBOM }}'
+docker buildx imagetools inspect ghcr.io/moutonnoireu/erugo-security:latest --format '{{ json .Provenance }}'
 ```
 
 ### Hardened deployment

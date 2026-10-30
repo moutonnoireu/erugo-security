@@ -18,6 +18,9 @@ Every release image is rebuilt weekly from scratch to pick up Alpine and PHP sec
   `no-new-privileges`. New `ERUGO_PORT` variable (default `80`). See *Hardened deployment* in the README.
 - The scheduler runs `schedule:work` instead of a root cron daemon; `sudo` and `cronie` removed.
 - Docker `HEALTHCHECK` on `/api/health`.
+- **Supply chain**: images signed with cosign (keyless, Sigstore), SBOM (SPDX) and SLSA provenance
+  attached to every image; all GitHub Actions pinned to commit hashes (updated by Dependabot);
+  the Trivy gate also runs on pull requests.
 
 ### Security
 - Security headers: Content-Security-Policy, `Referrer-Policy: no-referrer` (share links never leak
