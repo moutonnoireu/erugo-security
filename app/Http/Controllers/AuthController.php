@@ -15,10 +15,13 @@ use App\Jobs\sendEmail;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Models\ReverseShareInvite;
 use Illuminate\Support\Facades\Crypt;
+use App\Services\TwoFactor;
 
 
 class AuthController extends Controller
 {
+    use IssuesTokens;
+
 
     public function login(Request $request)
     {
@@ -39,21 +42,33 @@ class AuthController extends Controller
 
         $credentials = $request->only('email', 'password');
 
-        if (!Auth::attempt($credentials)) {
+        // Check the password without opening a session: a second factor may be required.
+        $user = Auth::getProvider()->retrieveByCredentials($credentials);
+        if (!$user || !Auth::getProvider()->validateCredentials($user, $credentials)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized'
             ], 401);
         }
 
-        $user = Auth::user();
-
         if (!$user->active) {
-            Auth::logout();
             return response()->json([
                 'status' => 'error',
                 'message' => 'Account is disabled'
             ], 403);
+        }
+
+        $twoFactor = app(TwoFactor::class);
+        if ($twoFactor->isEnabledFor($user)) {
+            return response()->json([
+                'status' => 'mfa_required',
+                'message' => 'Second factor required',
+                'data' => [
+                    'mfa_token' => $twoFactor->createLoginChallenge($user),
+                    'methods' => $twoFactor->methodsFor($user),
+                    'expires_in' => TwoFactor::CHALLENGE_TTL,
+                ]
+            ]);
         }
 
         return $this->respondWithToken($user);
@@ -161,34 +176,6 @@ class AuthController extends Controller
         auth()->invalidate();
 
         return $this->respondWithToken($user);
-    }
-
-    private function respondWithToken($user)
-    {
-        $token = Auth::login($user);
-
-        if (!$token) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized'
-            ], 401);
-        }
-
-        $twentyFourHours = 60 * 60 * 24;
-        $refreshToken = Auth::setTTL($twentyFourHours)->tokenById($user->id);
-
-        $cookie = cookie('refresh_token', $refreshToken, $twentyFourHours, null, null, false, true);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Login successful',
-            'data' => [
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'expires_in' => Auth::factory()->getTTL() * 60,
-                'guest' => $user->is_guest
-            ]
-        ])->withCookie($cookie);
     }
 
     public function forgotPassword(Request $request)

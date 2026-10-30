@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify'
 import { getApiUrl } from '../utils'
 import { useToast } from 'vue-toastification'
 import { domData } from '../domData'
-import { KeyRound, Fingerprint, UserPlus, Mail, ArrowLeft } from 'lucide-vue-next'
+import { KeyRound, Fingerprint, UserPlus, Mail, ArrowLeft, ShieldCheck } from 'lucide-vue-next'
 import { store } from '../store'
 import AltchaWidget from './AltchaWidget.vue'
 import {
@@ -19,8 +19,12 @@ import {
   getRegistrationSettings,
   registerUser,
   verifyEmail,
-  resendVerificationCode
+  resendVerificationCode,
+  verifyMfaCode,
+  getMfaPasskeyOptions,
+  verifyMfaPasskey
 } from '../api'
+import { passkeysSupported, getPasskeyAssertion } from '../webauthn'
 
 import { useTranslate } from '@tolgee/vue'
 
@@ -49,6 +53,86 @@ const getAltchaPayload = async () => {
   return payload
 }
 const resetAltcha = () => altchaWidget.value?.reset()
+
+// Second factor after a correct password
+const mfaMode = ref(false)
+const mfaToken = ref('')
+const mfaMethods = ref([])
+const mfaCode = ref('')
+const mfaUseRecovery = ref(false)
+const mfaBusy = ref(false)
+const canUsePasskey = computed(() => mfaMethods.value.includes('passkey') && passkeysSupported())
+
+const leaveMfa = () => {
+  mfaMode.value = false
+  mfaToken.value = ''
+  mfaMethods.value = []
+  mfaCode.value = ''
+  mfaUseRecovery.value = false
+}
+
+const handleMfaError = (error) => {
+  if (error.code === 'mfa_expired') {
+    toast.error(t.value('auth.mfa.expired'))
+    leaveMfa()
+  } else if (error.code === 'ip_not_allowed') {
+    toast.error(t.value('auth.ip_not_allowed'))
+  } else {
+    toast.error(t.value(error.code === 'mfa_invalid_passkey' ? 'auth.mfa.passkey_failed' : 'auth.mfa.invalid_code'))
+  }
+}
+
+const attemptMfaCode = async () => {
+  if (!mfaCode.value) return
+  mfaBusy.value = true
+  try {
+    const data = await verifyMfaCode(mfaToken.value, mfaUseRecovery.value ? 'recovery' : 'totp', mfaCode.value)
+    leaveMfa()
+    await finishLogin(data)
+  } catch (error) {
+    mfaCode.value = ''
+    handleMfaError(error)
+  } finally {
+    mfaBusy.value = false
+  }
+}
+
+const attemptMfaPasskey = async () => {
+  mfaBusy.value = true
+  try {
+    const options = await getMfaPasskeyOptions(mfaToken.value)
+    const credential = await getPasskeyAssertion(options)
+    const data = await verifyMfaPasskey(mfaToken.value, credential)
+    leaveMfa()
+    await finishLogin(data)
+  } catch (error) {
+    if (error?.name === 'NotAllowedError' || error?.name === 'AbortError') {
+      toast.error(t.value('auth.mfa.passkey_cancelled'))
+    } else {
+      handleMfaError(error)
+    }
+  } finally {
+    mfaBusy.value = false
+  }
+}
+
+const finishLogin = async (data) => {
+  store.authSuccess(data)
+  toast.success(t.value('auth.login_successful'))
+
+  // If there's a pending invite, accept it after successful login
+  if (hasInviteIdPending.value && pendingInviteId.value) {
+    try {
+      await acceptReverseShareInviteById(pendingInviteId.value)
+      toast.success(t.value('auth.invite_accepted'))
+    } catch (inviteError) {
+      toast.error(t.value('auth.failed_to_accept_invite'))
+    } finally {
+      hasInviteIdPending.value = false
+      pendingInviteId.value = null
+    }
+  }
+}
 const forgotPasswordMode = ref(false)
 const haveResetToken = ref(false)
 const resetToken = ref('')
@@ -136,21 +220,19 @@ const attemptLogin = async () => {
 
   try {
     const data = await login(email.value, password.value, altcha)
-    store.authSuccess(data)
-    toast.success(t.value('auth.login_successful'))
-
-    // If there's a pending invite, accept it after successful login
-    if (hasInviteIdPending.value && pendingInviteId.value) {
-      try {
-        await acceptReverseShareInviteById(pendingInviteId.value)
-        toast.success(t.value('auth.invite_accepted'))
-      } catch (inviteError) {
-        toast.error(t.value('auth.failed_to_accept_invite'))
-      } finally {
-        hasInviteIdPending.value = false
-        pendingInviteId.value = null
+    if (data.mfaRequired) {
+      mfaToken.value = data.mfaToken
+      mfaMethods.value = data.methods
+      mfaUseRecovery.value = !data.methods.includes('totp') && !data.methods.includes('passkey')
+      mfaMode.value = true
+      password.value = ''
+      // Passkey only: open the browser prompt right away
+      if (!data.methods.includes('totp') && canUsePasskey.value) {
+        attemptMfaPasskey()
       }
+      return
     }
+    await finishLogin(data)
   } catch (error) {
     if (error.code === 'ip_not_allowed') {
       toast.error(t.value('auth.ip_not_allowed'))
@@ -375,8 +457,68 @@ const switchToLogin = () => {
   <!-- Main Auth Container -->
   <div class="auth-container" v-else-if="!haveResetToken && !waitingForRedirect">
     <div class="auth-container-inner">
+      <!-- Second factor -->
+      <template v-if="mfaMode">
+        <h1>{{ $t('auth.mfa.title') }}</h1>
+        <template v-if="!mfaUseRecovery && mfaMethods.includes('totp')">
+          <p>{{ $t('auth.mfa.enter_code') }}</p>
+          <div class="input-container">
+            <label for="mfa_code">{{ $t('auth.mfa.code') }}</label>
+            <input
+              id="mfa_code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              class="verification-code-input"
+              v-model="mfaCode"
+              placeholder="123456"
+              @keyup.enter="attemptMfaCode"
+            />
+          </div>
+        </template>
+        <template v-else-if="mfaUseRecovery">
+          <p>{{ $t('auth.mfa.enter_recovery_code') }}</p>
+          <div class="input-container">
+            <label for="mfa_recovery">{{ $t('auth.mfa.recovery_code') }}</label>
+            <input id="mfa_recovery" type="text" autocomplete="off" v-model="mfaCode" placeholder="xxxxx-xxxxxx" @keyup.enter="attemptMfaCode" />
+          </div>
+        </template>
+        <template v-else>
+          <p>{{ $t('auth.mfa.use_passkey_prompt') }}</p>
+        </template>
+
+        <div class="row mt-3 align-items-center w-100">
+          <div class="col-12 ps-0 pe-0 mb-2" v-if="mfaUseRecovery || mfaMethods.includes('totp')">
+            <button class="block" @click="attemptMfaCode" :disabled="mfaBusy || !mfaCode">
+              <ShieldCheck />
+              {{ $t('auth.mfa.verify') }}
+            </button>
+          </div>
+          <div class="col-12 ps-0 pe-0 mb-2" v-if="canUsePasskey">
+            <button class="block secondary" @click="attemptMfaPasskey" :disabled="mfaBusy">
+              <Fingerprint />
+              {{ $t('auth.mfa.use_passkey') }}
+            </button>
+          </div>
+        </div>
+        <div class="row mt-2 align-items-center w-100">
+          <div class="col-6 ps-0">
+            <a href="" v-if="mfaMethods.includes('recovery')" @click.prevent="mfaUseRecovery = !mfaUseRecovery; mfaCode = ''">
+              {{ mfaUseRecovery ? $t('auth.mfa.use_app_or_passkey') : $t('auth.mfa.use_recovery_code') }}
+            </a>
+          </div>
+          <div class="col-6 pe-0 text-end">
+            <a href="" @click.prevent="leaveMfa">
+              <ArrowLeft style="width: 14px; height: 14px; margin-top: -2px;" />
+              {{ $t('auth.back_to_login') }}
+            </a>
+          </div>
+        </div>
+      </template>
+
       <!-- Login Mode -->
-      <template v-if="!forgotPasswordMode && !registrationMode">
+      <template v-else-if="!forgotPasswordMode && !registrationMode">
         <h1>{{ $t('auth.welcome') }}</h1>
         <p v-if="hasInviteIdPending">{{ $t('auth.login_to_accept_invite') }}</p>
         <p v-else>{{ loginMessage }}</p>
@@ -493,7 +635,7 @@ const switchToLogin = () => {
       </template>
 
       <!-- Auth Providers -->
-      <template v-if="authProviders.length > 0 && !waitingForRedirect && !forgotPasswordMode && !registrationMode">
+      <template v-if="authProviders.length > 0 && !waitingForRedirect && !forgotPasswordMode && !registrationMode && !mfaMode">
         <div class="row w-100 mt-5 mb-0 align-items-center">
           <div class="col">
             <hr />

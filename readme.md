@@ -48,6 +48,16 @@ Only allow signing in from a list of IPv4/IPv6 addresses or CIDR ranges. Shared 
 
 Self-hosted [ALTCHA](https://altcha.org) proof-of-work on the sign-in, password reset, registration and resend-code forms: the browser solves a short puzzle before the form is accepted. No third-party service, no cookies, no tracking. Challenges are signed with a key derived from `APP_KEY`, expire after 10 minutes and are accepted once. The difficulty is adjustable.
 
+### Two-factor authentication and passkeys
+
+Opt-in per user, in *Settings → My Account → Two-factor authentication*:
+
+- **Authenticator app** (TOTP, RFC 6238): any app such as Aegis, 2FAS, Google/Microsoft Authenticator or a password manager. The secret is encrypted at rest with `APP_KEY`, and a code cannot be used twice.
+- **Passkeys** (WebAuthn): fingerprint, face, PIN, security key or phone, as a second step after the password. Passkeys are bound to the domain Erugo is served on and require HTTPS (or `localhost`).
+- **Recovery codes**: 10 single-use codes, shown once, stored hashed.
+
+Turning a factor off needs the current password. Admins can reset a user who lost their device (*Users → Reset 2FA*), or from the command line: `docker compose exec app php artisan reset-2fa user@example.com`. Sign-in through an external provider (Google, Microsoft, Authentik, OIDC) relies on that provider's own MFA.
+
 ### Share password guessing
 
 Always on: after 10 wrong passwords for the same share from the same IP, further attempts are refused for 10 minutes.

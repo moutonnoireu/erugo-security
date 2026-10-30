@@ -458,8 +458,72 @@ export const login = async (email, password, altcha = null) => {
     error.code = data.code
     throw error
   }
+  // Second factor required: no session yet, only a short-lived challenge token
+  if (data.status === 'mfa_required') {
+    return { mfaRequired: true, mfaToken: data.data.mfa_token, methods: data.data.methods }
+  }
   return buildAuthSuccessData(data)
 }
+
+// ----- two-factor authentication -----
+
+const jsonOrThrow = async (response) => {
+  const data = await response.json()
+  if (!response.ok) {
+    const error = new Error(data.message)
+    error.code = data.code
+    throw error
+  }
+  return data
+}
+
+export const verifyMfaCode = async (mfaToken, method, code) => {
+  const response = await fetch(`${apiUrl}/api/auth/mfa/verify`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { ...addJsonHeader() },
+    body: JSON.stringify({ mfa_token: mfaToken, method, code })
+  })
+  return buildAuthSuccessData(await jsonOrThrow(response))
+}
+
+export const getMfaPasskeyOptions = async (mfaToken) => {
+  const response = await fetch(`${apiUrl}/api/auth/mfa/passkey/options`, {
+    method: 'POST',
+    headers: { ...addJsonHeader() },
+    body: JSON.stringify({ mfa_token: mfaToken })
+  })
+  return (await jsonOrThrow(response)).data.options
+}
+
+export const verifyMfaPasskey = async (mfaToken, credential) => {
+  const response = await fetch(`${apiUrl}/api/auth/mfa/passkey`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { ...addJsonHeader() },
+    body: JSON.stringify({ mfa_token: mfaToken, credential })
+  })
+  return buildAuthSuccessData(await jsonOrThrow(response))
+}
+
+const authJson = async (path, method = 'GET', body = null) => {
+  const response = await fetchWithAuth(`${apiUrl}${path}`, {
+    method,
+    headers: { ...addJsonHeader() },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  })
+  return (await jsonOrThrow(response)).data
+}
+
+export const getTwoFactorStatus = () => authJson('/api/users/me/2fa')
+export const startTotpSetup = () => authJson('/api/users/me/2fa/totp/setup', 'POST')
+export const confirmTotpSetup = (code) => authJson('/api/users/me/2fa/totp/confirm', 'POST', { code })
+export const disableTotp = (password) => authJson('/api/users/me/2fa/totp', 'DELETE', { password })
+export const regenerateRecoveryCodes = (password) => authJson('/api/users/me/2fa/recovery-codes', 'POST', { password })
+export const getPasskeyRegistrationOptions = async () => (await authJson('/api/users/me/passkeys/options', 'POST')).options
+export const registerPasskey = (name, credential) => authJson('/api/users/me/passkeys', 'POST', { name, credential })
+export const deletePasskey = (id, password) => authJson(`/api/users/me/passkeys/${id}`, 'DELETE', { password })
+export const resetUserTwoFactor = (userId) => authJson(`/api/users/${userId}/2fa`, 'DELETE')
 
 export const sendReverseShareInvite = async (email, name, message) => {
   const response = await fetchWithAuth(`${apiUrl}/api/reverse-shares/invite`, {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\AltchaController;
 use App\Http\Middleware\RequireAltcha;
 use Illuminate\Http\Request;
@@ -57,6 +58,11 @@ Route::group([], function ($router) {
         Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->name('auth.forgotPassword')->middleware(['throttle:5,5', RequireAltcha::class]);
         Route::post('reset-password', [AuthController::class, 'resetPassword'])->name('auth.resetPassword')->middleware('throttle:5,5');
 
+        //second factor after a password sign-in
+        Route::post('mfa/verify', [TwoFactorController::class, 'verifyLogin'])->name('auth.mfa.verify')->middleware('throttle:10,1');
+        Route::post('mfa/passkey/options', [TwoFactorController::class, 'passkeyLoginOptions'])->name('auth.mfa.passkeyOptions')->middleware('throttle:10,1');
+        Route::post('mfa/passkey', [TwoFactorController::class, 'passkeyLogin'])->name('auth.mfa.passkey')->middleware('throttle:10,1');
+
         // Self-registration routes
         Route::post('register', [SelfRegistrationController::class, 'register'])->name('auth.register')->middleware(['throttle:5,1', RequireAltcha::class]);
         Route::post('verify-email', [SelfRegistrationController::class, 'verifyEmail'])->name('auth.verifyEmail')->middleware('throttle:5,15');
@@ -69,6 +75,16 @@ Route::group([], function ($router) {
         Route::get('/', [UsersController::class, 'me'])->name('profile.view');
         Route::put('/', [UsersController::class, 'updateMe'])->name('profile.update');
         Route::delete('/providers/{providerId}', [UsersController::class, 'unlinkProvider'])->name('profile.unlinkProvider');
+
+        //two-factor authentication
+        Route::get('/2fa', [TwoFactorController::class, 'status'])->name('profile.2fa.status');
+        Route::post('/2fa/totp/setup', [TwoFactorController::class, 'totpSetup'])->name('profile.2fa.totpSetup');
+        Route::post('/2fa/totp/confirm', [TwoFactorController::class, 'totpConfirm'])->name('profile.2fa.totpConfirm')->middleware('throttle:10,1');
+        Route::delete('/2fa/totp', [TwoFactorController::class, 'totpDisable'])->name('profile.2fa.totpDisable')->middleware('throttle:10,1');
+        Route::post('/2fa/recovery-codes', [TwoFactorController::class, 'regenerateRecoveryCodes'])->name('profile.2fa.recoveryCodes')->middleware('throttle:10,1');
+        Route::post('/passkeys/options', [TwoFactorController::class, 'passkeyRegistrationOptions'])->name('profile.passkeys.options');
+        Route::post('/passkeys', [TwoFactorController::class, 'passkeyRegister'])->name('profile.passkeys.register');
+        Route::delete('/passkeys/{id}', [TwoFactorController::class, 'passkeyDelete'])->whereNumber('id')->name('profile.passkeys.delete')->middleware('throttle:10,1');
     });
 
     //manage users [auth, admin]
@@ -88,6 +104,8 @@ Route::group([], function ($router) {
 
         //force reset a user's password
         Route::post('/{id}/force-reset-password', [UsersController::class, 'forceResetPassword'])->name('users.forceResetPassword');
+        //remove every second factor of a user (lost device)
+        Route::delete('/{id}/2fa', [TwoFactorController::class, 'adminReset'])->whereNumber('id')->name('users.reset2fa');
     });
 
 
