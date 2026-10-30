@@ -164,7 +164,10 @@ try {
   const part = await context.request.get(`${BASE}/api/shares/${longId}/download`, { headers: { Range: 'bytes=100-199' } })
   check('ranged download', part.status() === 206 && Buffer.compare(await part.body(), content.subarray(100, 200)) === 0)
 } catch (e) {
-  check('unexpected error: ' + e.message, false)
+  check('unexpected error: ' + e.message.split('\n')[0], false)
+  const body = await page.innerText('body').catch(() => '')
+  console.log(`page: ${page.url()} :: ${body.replace(/\s+/g, ' ').slice(0, 400)}`)
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=Page at failure::${page.url()} :: ${body.replace(/\s+/g, ' ').slice(0, 400)}`)
   await shot('e2e-failure')
 }
 

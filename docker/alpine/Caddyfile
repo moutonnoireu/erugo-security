@@ -74,7 +74,9 @@ http://127.0.0.1:1081 {
 
 	# tusd hooks are internal only
 	@hooks path /api/tusd-hooks /api/tusd-hooks/*
-	respond @hooks 404
+	handle @hooks {
+		respond 404
+	}
 
 	# tusd uploads - must be handled before Laravel catches it
 	handle /files/* {
