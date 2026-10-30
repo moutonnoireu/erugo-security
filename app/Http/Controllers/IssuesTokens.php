@@ -9,7 +9,12 @@ use Illuminate\Support\Facades\Auth;
  */
 trait IssuesTokens
 {
-    protected function respondWithToken($user)
+    /**
+     * @param string $amr how the session was opened ("pwd" password sign-in,
+     *                    "sso" external provider); kept across refreshes so the
+     *                    two-factor policy only applies to password sessions.
+     */
+    protected function respondWithToken($user, string $amr = 'pwd')
     {
         $token = Auth::login($user);
 
@@ -21,7 +26,7 @@ trait IssuesTokens
         }
 
         $twentyFourHours = 60 * 60 * 24;
-        $refreshToken = Auth::setTTL($twentyFourHours)->tokenById($user->id);
+        $refreshToken = Auth::claims(['amr' => $amr])->setTTL($twentyFourHours)->tokenById($user->id);
 
         $cookie = cookie('refresh_token', $refreshToken, $twentyFourHours, null, null, false, true);
 

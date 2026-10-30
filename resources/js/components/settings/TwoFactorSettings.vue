@@ -51,6 +51,12 @@ const load = async () => {
 
 onMounted(load)
 
+const errorKey = (error) =>
+  ({
+    invalid_password: 'settings.two_factor.wrong_password',
+    mfa_required_by_policy: 'settings.two_factor.required_by_policy'
+  })[error.code] ?? 'settings.two_factor.action_failed'
+
 const askPassword = () => window.prompt(t.value('settings.two_factor.confirm_password'))
 
 const showRecoveryCodes = (codes) => {
@@ -93,7 +99,7 @@ const handleDisableTotp = async () => {
     status.value = await disableTotp(password)
     toast.success(t.value('settings.two_factor.totp_disabled'))
   } catch (error) {
-    toast.error(t.value(error.code === 'invalid_password' ? 'settings.two_factor.wrong_password' : 'settings.two_factor.action_failed'))
+    toast.error(t.value(errorKey(error)))
   } finally {
     busy.value = false
   }
@@ -130,7 +136,7 @@ const handleDeletePasskey = async (passkey) => {
     status.value = await deletePasskey(passkey.id, password)
     toast.success(t.value('settings.two_factor.passkey_removed'))
   } catch (error) {
-    toast.error(t.value(error.code === 'invalid_password' ? 'settings.two_factor.wrong_password' : 'settings.two_factor.action_failed'))
+    toast.error(t.value(errorKey(error)))
   } finally {
     busy.value = false
   }

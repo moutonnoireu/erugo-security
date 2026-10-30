@@ -95,7 +95,12 @@
       "invalid_code": "Code invalide, veuillez réessayer.",
       "expired": "La connexion a expiré, saisissez à nouveau votre mot de passe.",
       "passkey_failed": "La clé d'accès n'a pas pu être vérifiée.",
-      "passkey_cancelled": "Demande de clé d'accès annulée."
+      "passkey_cancelled": "Demande de clé d'accès annulée.",
+      "enrol_title": "Configurer la double authentification",
+      "enrol_description": "Votre administrateur exige une seconde étape à la connexion. Choisissez comment confirmer votre identité : elle vous sera demandée à chaque connexion par mot de passe.",
+      "enrol_other_method": "Choisir une autre méthode",
+      "enrol_continue": "J'ai enregistré mes codes, continuer",
+      "enrol_expired": "La configuration a expiré, veuillez vous reconnecter."
     }
   },
   "button": {
@@ -895,7 +900,13 @@
         "encryption_key_absent": "Aucune clé de chiffrement : définissez d'abord STORAGE_ENCRYPTION_KEY (à générer avec : php artisan generate-storage-key).",
         "encryption_enabled": "Chiffrer les nouveaux partages",
         "encryption_help": "Conservez une copie de la clé en lieu sûr : sans elle, les fichiers chiffrés sont perdus. Les partages existants ne changent pas ; chiffrez-les avec php artisan encrypt-existing-files. Pour arrêter le chiffrement, décochez cette case puis lancez php artisan decrypt-files avant de retirer la clé.",
-        "encryption_key_missing": "Définissez la variable d'environnement STORAGE_ENCRYPTION_KEY avant d'activer le chiffrement."
+        "encryption_key_missing": "Définissez la variable d'environnement STORAGE_ENCRYPTION_KEY avant d'activer le chiffrement.",
+        "mfa_policy": "Règle de double authentification",
+        "mfa_policy_label": "Obligatoire pour",
+        "mfa_policy_none": "Personne (chacun choisit)",
+        "mfa_policy_admins": "Les administrateurs",
+        "mfa_policy_everyone": "Tous les utilisateurs",
+        "mfa_policy_help": "Les utilisateurs concernés sans second facteur devront en configurer un à leur prochaine connexion par mot de passe, et leur session en cours n'est pas renouvelée. Les invités et les connexions via un fournisseur externe (qui gère sa propre MFA) ne sont pas concernés."
       }
     },
     "system_auth_provider_info_link": "À propos",
@@ -1031,7 +1042,8 @@
       "codes_copied": "Codes de récupération copiés.",
       "confirm_password": "Saisissez votre mot de passe actuel pour continuer :",
       "wrong_password": "Mot de passe actuel incorrect.",
-      "action_failed": "Une erreur est survenue, veuillez réessayer."
+      "action_failed": "Une erreur est survenue, veuillez réessayer.",
+      "required_by_policy": "La double authentification est obligatoire pour votre compte : ajoutez une autre méthode avant de retirer celle-ci."
     }
   },
   "setup": {

@@ -131,7 +131,11 @@ class TwoFactorController extends Controller
      */
     public function totpSetup(): JsonResponse
     {
-        $user = Auth::user();
+        return $this->startTotp(Auth::user());
+    }
+
+    private function startTotp(User $user): JsonResponse
+    {
         $secret = Totp::generateSecret();
         Cache::put($this->pendingTotpKey($user), encrypt($secret), 900);
 
@@ -147,15 +151,19 @@ class TwoFactorController extends Controller
     public function totpConfirm(Request $request): JsonResponse
     {
         $request->validate(['code' => 'required|string|max:16']);
-        $user = Auth::user();
 
+        return $this->confirmTotp(Auth::user(), $request->code);
+    }
+
+    private function confirmTotp(User $user, string $code): JsonResponse
+    {
         $pending = Cache::get($this->pendingTotpKey($user));
         if (!$pending) {
             return response()->json(['status' => 'error', 'code' => 'totp_setup_expired', 'message' => 'Setup expired, please start again'], 422);
         }
 
         $secret = decrypt($pending);
-        $step = Totp::verify($secret, $request->code);
+        $step = Totp::verify($secret, $code);
         if ($step === null) {
             return response()->json(['status' => 'error', 'code' => 'mfa_invalid_code', 'message' => 'Invalid code'], 422);
         }
@@ -180,6 +188,9 @@ class TwoFactorController extends Controller
         if ($error = $this->checkPassword($request, $user)) {
             return $error;
         }
+        if ($error = $this->refuseIfLastFactorRequired($user, removesTotp: true)) {
+            return $error;
+        }
 
         $user->forceFill(['totp_secret' => null, 'totp_enabled_at' => null, 'totp_last_timestep' => null])->save();
         $this->dropRecoveryCodesIfUnused($user);
@@ -201,7 +212,12 @@ class TwoFactorController extends Controller
             'name' => 'nullable|string|max:100',
             'credential' => 'required|array',
         ]);
-        $user = Auth::user();
+
+        return $this->registerPasskey(Auth::user(), $request, $passkeys);
+    }
+
+    private function registerPasskey(User $user, Request $request, Passkeys $passkeys): JsonResponse
+    {
         $firstFactor = !$this->twoFactor->isEnabledFor($user);
 
         try {
@@ -230,6 +246,9 @@ class TwoFactorController extends Controller
         if ($error = $this->checkPassword($request, $user)) {
             return $error;
         }
+        if ($error = $this->refuseIfLastFactorRequired($user, removesPasskeyId: $id)) {
+            return $error;
+        }
 
         $user->passkeys()->whereKey($id)->delete();
         $this->dropRecoveryCodesIfUnused($user);
@@ -252,6 +271,108 @@ class TwoFactorController extends Controller
             'status' => 'success',
             'data' => ['recovery_codes' => $this->twoFactor->regenerateRecoveryCodes($user)],
         ]);
+    }
+
+    // ===== mandatory enrolment (admin policy) ==============================
+    //
+    // A password sign-in by a user who must have 2FA but has none gets an
+    // enrolment token instead of a session; the session is issued once a
+    // first factor is set up with that token.
+
+    public function enrolTotpSetup(Request $request): JsonResponse
+    {
+        $request->validate(['enrol_token' => 'required|string']);
+        $user = $this->twoFactor->userForEnrolment($request->enrol_token);
+
+        return $user ? $this->startTotp($user) : $this->enrolmentExpired();
+    }
+
+    public function enrolTotpConfirm(Request $request): JsonResponse
+    {
+        $request->validate(['enrol_token' => 'required|string', 'code' => 'required|string|max:16']);
+        $user = $this->twoFactor->userForEnrolment($request->enrol_token);
+        if (!$user) {
+            return $this->enrolmentExpired();
+        }
+
+        return $this->finishEnrolment($request->enrol_token, $user, $this->confirmTotp($user, $request->code));
+    }
+
+    public function enrolPasskeyOptions(Request $request, Passkeys $passkeys): JsonResponse
+    {
+        $request->validate(['enrol_token' => 'required|string']);
+        $user = $this->twoFactor->userForEnrolment($request->enrol_token);
+        if (!$user) {
+            return $this->enrolmentExpired();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['options' => $passkeys->registrationOptions($user)],
+        ]);
+    }
+
+    public function enrolPasskey(Request $request, Passkeys $passkeys): JsonResponse
+    {
+        $request->validate([
+            'enrol_token' => 'required|string',
+            'name' => 'nullable|string|max:100',
+            'credential' => 'required|array',
+        ]);
+        $user = $this->twoFactor->userForEnrolment($request->enrol_token);
+        if (!$user) {
+            return $this->enrolmentExpired();
+        }
+
+        return $this->finishEnrolment($request->enrol_token, $user, $this->registerPasskey($user, $request, $passkeys));
+    }
+
+    /**
+     * After a successful first factor, open the session and hand over the recovery codes.
+     */
+    private function finishEnrolment(string $token, User $user, JsonResponse $result): JsonResponse
+    {
+        if (!$result->isSuccessful()) {
+            return $result;
+        }
+
+        $this->twoFactor->completeEnrolment($token);
+        $session = $this->respondWithToken($user->fresh());
+        $data = $session->getData(true);
+        $data['data']['recovery_codes'] = $result->getData(true)['data']['recovery_codes'] ?? null;
+
+        return $session->setData($data);
+    }
+
+    private function enrolmentExpired(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'error',
+            'code' => 'mfa_enrolment_expired',
+            'message' => 'Setup expired, please sign in again',
+        ], 401);
+    }
+
+    /**
+     * Keep at least one factor when the admin policy requires 2FA for this user.
+     */
+    private function refuseIfLastFactorRequired(User $user, bool $removesTotp = false, ?int $removesPasskeyId = null): ?JsonResponse
+    {
+        if (!$this->twoFactor->isRequiredFor($user)) {
+            return null;
+        }
+
+        $totpLeft = $user->totp_enabled_at !== null && !$removesTotp;
+        $passkeysLeft = $user->passkeys()->when($removesPasskeyId, fn ($q) => $q->whereKeyNot($removesPasskeyId))->exists();
+        if ($totpLeft || $passkeysLeft) {
+            return null;
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'code' => 'mfa_required_by_policy',
+            'message' => 'Two-factor authentication is required for your account: add another method first.',
+        ], 422);
     }
 
     // ===== admin ============================================================

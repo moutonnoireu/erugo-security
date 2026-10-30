@@ -7,6 +7,7 @@ import { domData } from '../domData'
 import { KeyRound, Fingerprint, UserPlus, Mail, ArrowLeft, ShieldCheck } from 'lucide-vue-next'
 import { store } from '../store'
 import AltchaWidget from './AltchaWidget.vue'
+import TwoFactorEnrolment from './TwoFactorEnrolment.vue'
 import {
   login,
   refresh,
@@ -53,6 +54,13 @@ const getAltchaPayload = async () => {
   return payload
 }
 const resetAltcha = () => altchaWidget.value?.reset()
+
+// Mandatory two-factor setup (admin policy)
+const enrolToken = ref('')
+const finishEnrolment = async (data) => {
+  enrolToken.value = ''
+  await finishLogin(data)
+}
 
 // Second factor after a correct password
 const mfaMode = ref(false)
@@ -220,6 +228,11 @@ const attemptLogin = async () => {
 
   try {
     const data = await login(email.value, password.value, altcha)
+    if (data.enrolmentRequired) {
+      enrolToken.value = data.enrolToken
+      password.value = ''
+      return
+    }
     if (data.mfaRequired) {
       mfaToken.value = data.mfaToken
       mfaMethods.value = data.methods
@@ -457,8 +470,13 @@ const switchToLogin = () => {
   <!-- Main Auth Container -->
   <div class="auth-container" v-else-if="!haveResetToken && !waitingForRedirect">
     <div class="auth-container-inner">
+      <!-- Mandatory two-factor setup -->
+      <template v-if="enrolToken">
+        <TwoFactorEnrolment :enrol-token="enrolToken" @done="finishEnrolment" @cancel="enrolToken = ''" />
+      </template>
+
       <!-- Second factor -->
-      <template v-if="mfaMode">
+      <template v-else-if="mfaMode">
         <h1>{{ $t('auth.mfa.title') }}</h1>
         <template v-if="!mfaUseRecovery && mfaMethods.includes('totp')">
           <p>{{ $t('auth.mfa.enter_code') }}</p>
@@ -635,7 +653,7 @@ const switchToLogin = () => {
       </template>
 
       <!-- Auth Providers -->
-      <template v-if="authProviders.length > 0 && !waitingForRedirect && !forgotPasswordMode && !registrationMode && !mfaMode">
+      <template v-if="authProviders.length > 0 && !waitingForRedirect && !forgotPasswordMode && !registrationMode && !mfaMode && !enrolToken">
         <div class="row w-100 mt-5 mb-0 align-items-center">
           <div class="col">
             <hr />

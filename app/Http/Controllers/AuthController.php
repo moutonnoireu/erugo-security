@@ -59,6 +59,19 @@ class AuthController extends Controller
         }
 
         $twoFactor = app(TwoFactor::class);
+
+        // Admin policy: no session until a first factor is set up
+        if (!$twoFactor->isEnabledFor($user) && $twoFactor->isRequiredFor($user)) {
+            return response()->json([
+                'status' => 'mfa_enrolment_required',
+                'message' => 'Two-factor authentication must be set up',
+                'data' => [
+                    'enrol_token' => $twoFactor->createEnrolmentChallenge($user),
+                    'expires_in' => TwoFactor::ENROLMENT_TTL,
+                ]
+            ]);
+        }
+
         if ($twoFactor->isEnabledFor($user)) {
             return response()->json([
                 'status' => 'mfa_required',
@@ -103,7 +116,19 @@ class AuthController extends Controller
             ], 403);
         }
 
-        return $this->respondWithToken($user);
+        // Password sessions of users who must have 2FA but have none are not renewed:
+        // they sign in again and go through the mandatory setup.
+        $amr = rescue(fn () => Auth::getPayload()->get('amr'), null, false) === 'sso' ? 'sso' : 'pwd';
+        $twoFactor = app(TwoFactor::class);
+        if ($amr !== 'sso' && $twoFactor->isRequiredFor($user) && !$twoFactor->isEnabledFor($user)) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'mfa_enrolment_required',
+                'message' => 'Two-factor authentication must be set up: please sign in again'
+            ], 401);
+        }
+
+        return $this->respondWithToken($user, $amr);
     }
 
     //logout the user

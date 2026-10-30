@@ -79,7 +79,8 @@ const settings = ref({
   login_ip_allowlist: '',
   altcha_enabled: false,
   altcha_max_number: 100000,
-  storage_encryption_enabled: false
+  storage_encryption_enabled: false,
+  mfa_required_for: 'none'
 })
 
 // IP address of this browser as seen by the server (for the sign-in allowlist),
@@ -1282,6 +1283,19 @@ const handleDeleteAuthProvider = async (id) => {
                     step="1000"
                   />
                   <p class="help-text">{{ $t('settings.system.security.altcha_difficulty_help') }}</p>
+                </div>
+
+                <hr class="my-4" />
+
+                <h5 id="mfa_policy_section" class="mb-3">{{ $t('settings.system.security.mfa_policy') }}</h5>
+                <div class="setting-group-body-item">
+                  <label for="mfa_required_for">{{ $t('settings.system.security.mfa_policy_label') }}</label>
+                  <select id="mfa_required_for" v-model="settings.mfa_required_for">
+                    <option value="none">{{ $t('settings.system.security.mfa_policy_none') }}</option>
+                    <option value="admins">{{ $t('settings.system.security.mfa_policy_admins') }}</option>
+                    <option value="everyone">{{ $t('settings.system.security.mfa_policy_everyone') }}</option>
+                  </select>
+                  <p class="help-text">{{ $t('settings.system.security.mfa_policy_help') }}</p>
                 </div>
 
                 <hr class="my-4" />

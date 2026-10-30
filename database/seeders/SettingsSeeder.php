@@ -484,6 +484,14 @@ class SettingsSeeder extends Seeder
                 'group' => 'system.security',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'key' => 'mfa_required_for',
+                'value' => 'none',
+                'previous_value' => null,
+                'group' => 'system.security',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
 
         ]);

@@ -95,7 +95,12 @@
       "invalid_code": "Invalid code, please try again.",
       "expired": "Sign-in expired, please enter your password again.",
       "passkey_failed": "The passkey could not be verified.",
-      "passkey_cancelled": "Passkey prompt cancelled."
+      "passkey_cancelled": "Passkey prompt cancelled.",
+      "enrol_title": "Set up two-factor authentication",
+      "enrol_description": "Your administrator requires a second step at sign-in. Choose how you want to confirm it is you: you will need it every time you sign in with your password.",
+      "enrol_other_method": "Choose another method",
+      "enrol_continue": "I have saved my codes, continue",
+      "enrol_expired": "Setup expired, please sign in again."
     }
   },
   "button": {
@@ -916,7 +921,13 @@
         "encryption_key_absent": "No encryption key: set STORAGE_ENCRYPTION_KEY first (generate one with: php artisan generate-storage-key).",
         "encryption_enabled": "Encrypt new shares",
         "encryption_help": "Keep a copy of the key somewhere safe: without it, encrypted files are lost. Existing shares stay as they are; encrypt them with php artisan encrypt-existing-files. To stop encrypting, untick this box, then run php artisan decrypt-files before removing the key.",
-        "encryption_key_missing": "Set the STORAGE_ENCRYPTION_KEY environment variable before enabling encryption."
+        "encryption_key_missing": "Set the STORAGE_ENCRYPTION_KEY environment variable before enabling encryption.",
+        "mfa_policy": "Two-factor authentication policy",
+        "mfa_policy_label": "Required for",
+        "mfa_policy_none": "Nobody (each user chooses)",
+        "mfa_policy_admins": "Administrators",
+        "mfa_policy_everyone": "Every user",
+        "mfa_policy_help": "Users concerned who have no second factor must set one up at their next password sign-in, and their current session is not renewed. Guests and sign-ins through an external provider (which has its own MFA) are not affected."
       }
     },
     "system_auth_provider_info_link": "About {name}",
@@ -1052,7 +1063,8 @@
       "codes_copied": "Recovery codes copied.",
       "confirm_password": "Enter your current password to continue:",
       "wrong_password": "Current password is incorrect.",
-      "action_failed": "Something went wrong, please try again."
+      "action_failed": "Something went wrong, please try again.",
+      "required_by_policy": "Two-factor authentication is required for your account: add another method before removing this one."
     }
   },
   "setup": {

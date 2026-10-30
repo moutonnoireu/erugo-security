@@ -62,6 +62,11 @@ Route::group([], function ($router) {
         Route::post('mfa/verify', [TwoFactorController::class, 'verifyLogin'])->name('auth.mfa.verify')->middleware('throttle:10,1');
         Route::post('mfa/passkey/options', [TwoFactorController::class, 'passkeyLoginOptions'])->name('auth.mfa.passkeyOptions')->middleware('throttle:10,1');
         Route::post('mfa/passkey', [TwoFactorController::class, 'passkeyLogin'])->name('auth.mfa.passkey')->middleware('throttle:10,1');
+        //mandatory first-factor setup (admin policy)
+        Route::post('mfa/enrol/totp/setup', [TwoFactorController::class, 'enrolTotpSetup'])->name('auth.mfa.enrolTotpSetup')->middleware('throttle:10,1');
+        Route::post('mfa/enrol/totp/confirm', [TwoFactorController::class, 'enrolTotpConfirm'])->name('auth.mfa.enrolTotpConfirm')->middleware('throttle:10,1');
+        Route::post('mfa/enrol/passkey/options', [TwoFactorController::class, 'enrolPasskeyOptions'])->name('auth.mfa.enrolPasskeyOptions')->middleware('throttle:10,1');
+        Route::post('mfa/enrol/passkey', [TwoFactorController::class, 'enrolPasskey'])->name('auth.mfa.enrolPasskey')->middleware('throttle:10,1');
 
         // Self-registration routes
         Route::post('register', [SelfRegistrationController::class, 'register'])->name('auth.register')->middleware(['throttle:5,1', RequireAltcha::class]);
