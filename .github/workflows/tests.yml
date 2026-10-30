@@ -85,26 +85,48 @@ jobs:
           for ext in pdo_sqlite pdo_mysql pdo_pgsql gd intl zip mbstring curl openssl sodium; do
             echo "$MODULES" | grep -qix "$ext" || { echo "::error::Missing PHP extension: $ext"; exit 1; }
           done
-      - name: Boot the container
+      - name: Trivy scan (fail on fixable CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: erugo-pr:ci
+          severity: CRITICAL
+          ignore-unfixed: true
+          format: json
+          output: trivy.json
+          exit-code: '0'
+      - name: Report Trivy findings
         run: |
-          # same layout as the reference compose file: storage is a volume
-          docker run -d --name erugo -p 8080:80 -v erugo-storage:/var/www/html/storage erugo-pr:ci
-          for i in $(seq 1 90); do
-            if curl -fsS http://localhost:8080/api/health > /dev/null 2>&1; then
-              curl -fsS http://localhost:8080/api/health; echo
-              curl -fsS -o /dev/null -w "home page: %{http_code}\n" http://localhost:8080/
-              exit 0
-            fi
-            sleep 2
-          done
-          LOGS=$(docker logs erugo 2>&1 | tail -n 60 | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
-          echo "::error title=Erugo did not answer on /api/health::$LOGS"
-          docker exec erugo sh -c 'tail -n 40 /var/log/supervisor/*.log 2>/dev/null; tail -n 40 /var/www/html/storage/logs/*.log 2>/dev/null' || true
-          exit 1
-      - name: End-to-end sign-in flows (2FA, passkeys)
+          # One annotation per finding, so failures are readable from the run summary
+          jq -r '.Results[]? | .Target as $t | .Vulnerabilities[]? |
+            "::error title=\(.VulnerabilityID) (\(.Severity))::\(.PkgName) \(.InstalledVersion) -> \(.FixedVersion) in \($t)"' trivy.json
+          COUNT=$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy.json)
+          echo "Fixable CRITICAL vulnerabilities: $COUNT"
+          [ "$COUNT" -eq 0 ]
+      - name: Boot with the default settings (existing deployments)
+        run: |
+          # same layout as the reference compose file: started as root, port 80, storage volume
+          docker run -d --name erugo-default -p 8081:80 -v erugo-storage:/var/www/html/storage erugo-pr:ci
+          ./.github/scripts/wait-healthy.sh erugo-default http://localhost:8081
+          # root is only used to fix the volume ownership: every process runs as erugo (uid 1000)
+          PROCS=$(docker top erugo-default -eo uid,pid,args 2>&1) || { echo "::error::docker top failed: $PROCS"; exit 1; }
+          echo "$PROCS"
+          OTHERS=$(echo "$PROCS" | tail -n +2 | awk '$1 != "1000"')
+          if [ -n "$OTHERS" ]; then
+            echo "::error title=Processes not running as erugo::$(echo "$OTHERS" | sed -e ':a;N;$!ba;s/\n/%0A/g')"; exit 1
+          fi
+          docker rm -f erugo-default
+      - name: Boot hardened (read-only, no capabilities, non-root from the start)
+        run: |
+          # reuses the volume initialised above, as an upgrade would
+          docker run -d --name erugo -p 8080:8080 -e ERUGO_PORT=8080 \
+            --user 1000:1000 --read-only --tmpfs /tmp:rw,size=512m \
+            --cap-drop ALL --security-opt no-new-privileges \
+            -v erugo-storage:/var/www/html/storage erugo-pr:ci
+          ./.github/scripts/wait-healthy.sh erugo http://localhost:8080
+      - name: End-to-end flows (headers, 2FA, passkeys, upload/download)
         run: |
           # test account and settings inside the running container
-          docker exec -u erugo erugo php /var/www/html/artisan tinker --execute='
+          docker exec -u erugo -e HOME=/tmp erugo php /var/www/html/artisan tinker --execute='
             $u = new App\Models\User; $u->name = "E2E"; $u->email = "e2e@example.com";
             $u->password = bcrypt("E2e-Password-123!"); $u->admin = true; $u->active = true;
             $u->must_change_password = false; $u->save();
@@ -115,6 +137,11 @@ jobs:
           mkdir -p e2e-screenshots
           BASE_URL=http://localhost:8080 EMAIL=e2e@example.com PASSWORD='E2e-Password-123!' \
             SCREENSHOTS_DIR=e2e-screenshots node tests/e2e/auth-flows.mjs
+      - name: Container logs on failure
+        if: failure()
+        run: |
+          docker logs erugo 2>&1 | tail -n 200 || true
+          docker exec erugo sh -c 'tail -n 50 /var/www/html/storage/logs/*.log' 2>/dev/null || true
       - name: Keep screenshots on failure
         if: failure()
         uses: actions/upload-artifact@v4

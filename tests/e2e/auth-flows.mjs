@@ -1,7 +1,9 @@
 // End-to-end sign-in flows in a real browser (Chromium + virtual WebAuthn authenticator):
 //   password sign-in -> authenticator app setup -> passkey registration
 //   -> sign-in with passkey as second factor -> with a recovery code
-//   -> with an authenticator code -> passwordless sign-in with the passkey.
+//   -> with an authenticator code -> passwordless sign-in with the passkey
+//   -> upload a file (tus) -> download it back, in full and by range.
+// Also checks the security headers and fails on any Content-Security-Policy violation.
 //
 // Usage: BASE_URL=http://localhost:8080 EMAIL=... PASSWORD=... node tests/e2e/auth-flows.mjs
 // The account must exist, have no second factor, and passkey sign-in must be
@@ -35,6 +37,7 @@ const results = []
 const check = (name, ok) => {
   results.push({ name, ok })
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`)
+  if (!ok && process.env.GITHUB_ACTIONS) console.log(`::error title=e2e failed::${name}`)
 }
 
 const browser = await chromium.launch()
@@ -42,6 +45,9 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 950 
 const page = await context.newPage()
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
+page.on('console', (m) => {
+  if (m.type() === 'error' && /Content Security Policy|Refused to/i.test(m.text())) errors.push('CSP: ' + m.text())
+})
 page.on('dialog', (d) => d.accept(PASSWORD))
 
 const cdp = await context.newCDPSession(page)
@@ -66,6 +72,18 @@ const passwordSignIn = async () => {
 }
 
 try {
+  // 0. security headers
+  const home = await context.request.get(BASE + '/')
+  const h = home.headers()
+  check('security headers', home.ok()
+    && /default-src 'self'/.test(h['content-security-policy'] || '')
+    && /frame-ancestors 'self'/.test(h['content-security-policy'] || '')
+    && h['referrer-policy'] === 'no-referrer'
+    && h['x-content-type-options'] === 'nosniff'
+    && !h['server'] && !h['x-powered-by'])
+  check('tusd hooks are not reachable from outside',
+    (await context.request.post(BASE + '/api/tusd-hooks', { data: { Type: 'post-receive' } })).status() === 404)
+
   // 1. password only
   await passwordSignIn()
   check('password sign-in without second factor', await signedIn())
@@ -125,12 +143,35 @@ try {
   await page.getByRole('button', { name: /sign in with a passkey/i }).click()
   await page.waitForTimeout(2500)
   check('passwordless sign-in with the passkey', await signedIn())
+
+  // 8. upload a file through tus, then download it from the share link
+  const content = crypto.randomBytes(3 * 1024 * 1024 + 123)
+  const chooser = page.waitForEvent('filechooser')
+  await page.locator('button.upload-files').click()
+  await (await chooser).setFiles({ name: 'e2e-file.bin', mimeType: 'application/octet-stream', buffer: content })
+  await page.locator('button.upload-button').click()
+  await page.waitForSelector('.sharePanel.visible', { timeout: 60000 })
+  const shareUrl = (await page.locator('.sharePanel-url').innerText()).trim()
+  const longId = shareUrl.split('/shares/')[1]
+  check('upload creates a share', !!longId)
+  let full
+  for (let i = 0; i < 30; i++) {
+    full = await context.request.get(`${BASE}/api/shares/${longId}/download`)
+    if (full.ok()) break
+    await page.waitForTimeout(1000)
+  }
+  check('download returns the uploaded bytes', full.ok() && Buffer.compare(await full.body(), content) === 0)
+  const part = await context.request.get(`${BASE}/api/shares/${longId}/download`, { headers: { Range: 'bytes=100-199' } })
+  check('ranged download', part.status() === 206 && Buffer.compare(await part.body(), content.subarray(100, 200)) === 0)
 } catch (e) {
-  check('unexpected error: ' + e.message, false)
+  check('unexpected error: ' + e.message.split('\n')[0], false)
+  const body = await page.innerText('body').catch(() => '')
+  console.log(`page: ${page.url()} :: ${body.replace(/\s+/g, ' ').slice(0, 400)}`)
+  if (process.env.GITHUB_ACTIONS) console.log(`::error title=Page at failure::${page.url()} :: ${body.replace(/\s+/g, ' ').slice(0, 400)}`)
   await shot('e2e-failure')
 }
 
 check('no JavaScript errors', errors.length === 0)
-if (errors.length) console.log(errors.join('\n'))
+if (errors.length) console.log(process.env.GITHUB_ACTIONS ? `::error title=Browser errors::${errors.join('%0A')}` : errors.join('\n'))
 await browser.close()
 process.exit(results.every((r) => r.ok) ? 0 : 1)

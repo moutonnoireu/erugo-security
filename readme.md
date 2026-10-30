@@ -8,7 +8,8 @@
 ## Why this fork
 
 - **Security fixes included**: 20+ community fixes (auth, path traversal, XSS, mass assignment…), see [SECURITY-PATCHES.md](SECURITY-PATCHES.md).
-- **Maintained base image**: upstream builds on `alpine:3.19` and PHP 8.3; this fork uses `alpine:3.24` and **PHP 8.5**, with production dependencies only (no dev tooling in the image) and checksum-verified downloads.
+- **Maintained base image**: upstream builds on `alpine:3.19` and PHP 8.3; this fork uses [FrankenPHP](https://frankenphp.dev) on Alpine with **PHP 8.5**, production dependencies only (no dev tooling in the image) and checksum-verified downloads.
+- **Unprivileged container**: every process runs as an unprivileged user, the application code is read-only for it, and the container can run with a read-only root filesystem and no capabilities (see [Hardened deployment](#hardened-deployment)). Strict security headers (Content-Security-Policy, `Referrer-Policy: no-referrer`…) are sent by default.
 - **Scanned and rebuilt weekly**: every image is scanned with Trivy and rebuilt from scratch each Monday, so PHP and Alpine fixes land without waiting for a commit.
 - **Drop-in compatible**: same `storage` volume, same database. Tracked upstream release: [`.upstream-version`](.upstream-version).
 
@@ -25,6 +26,34 @@ services:
       - "9998:80"
 ```
 
+### Hardened deployment
+
+The example above keeps working as is. To go further, run the container without root, with a read-only root filesystem and without Linux capabilities:
+
+```yaml
+services:
+  app:
+    image: ghcr.io/moutonnoireu/erugo-security:latest
+    restart: unless-stopped
+    user: "1000:1000"            # the storage folder must belong to 1000:1000
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      ERUGO_PORT: "8080"         # port inside the container
+    volumes:
+      - ./erugo-storage:/var/www/html/storage
+    ports:
+      - "9998:8080"
+```
+
+- Started as root (default), the container only fixes the ownership of `storage`, then drops to the `erugo` user (uid 1000) before starting anything. Starting it once without `user:` is the easiest way to fix the ownership of an existing folder (or `chown -R 1000:1000 ./erugo-storage`).
+- `ERUGO_PORT` defaults to `80`, which unprivileged processes can bind under Docker and Podman. On Kubernetes or Docker older than 20.10, set it to `8080`.
+- TLS is not handled in the container: put it behind your reverse proxy, which should send `X-Forwarded-*` headers (see `TRUSTED_PROXIES` below).
+
 Tags: `latest` (latest release), `0.2.15-sec.1` (a fixed release), `0.2.15` (latest release for that upstream version), `edge` (development branch, not a release). Releases and their notes: [CHANGELOG.md](CHANGELOG.md). Release images are rebuilt every week to pick up Alpine and PHP security updates.
 
 ## Optional security features
@@ -37,7 +66,7 @@ Only allow signing in from a list of IPv4/IPv6 addresses or CIDR ranges. Shared 
 
 - Erugo refuses to enable the list if it does not contain the IP of the admin saving it.
 - Behind a reverse proxy, set `TRUSTED_PROXIES` so Erugo sees the real client address (comma-separated IPs/CIDRs of your proxies, or `*` if the container is only reachable through the proxy). Without it, every request appears to come from the proxy.
-- Locked out after an IP change: `docker compose exec app php artisan disable-ip-allowlist`
+- Locked out after an IP change: `docker compose exec -u erugo app php artisan disable-ip-allowlist`
 
 ```yaml
     environment:
@@ -60,20 +89,20 @@ Opt-in per user, in *Settings → My Account → Two-factor authentication*:
 
 **Policy** (*System settings → Security*): an admin can require two-factor authentication for **administrators** or **every user**. Users concerned who have none must set it up at their next password sign-in, before any session is opened, and their current password session is not renewed. They cannot remove their last factor while the policy applies.
 
-Turning a factor off needs the current password. Admins can reset a user who lost their device (*Users → Reset 2FA*), or from the command line: `docker compose exec app php artisan reset-2fa user@example.com`. Sign-in through an external provider (Google, Microsoft, Authentik, OIDC) relies on that provider's own MFA.
+Turning a factor off needs the current password. Admins can reset a user who lost their device (*Users → Reset 2FA*), or from the command line: `docker compose exec -u erugo app php artisan reset-2fa user@example.com`. Sign-in through an external provider (Google, Microsoft, Authentik, OIDC) relies on that provider's own MFA.
 
 ### Encryption of stored files
 
 Shared files can be encrypted on disk, so that a copy of the storage volume or of a backup is unreadable on its own.
 
-1. Generate a key and keep a copy **outside the server** (password manager, safe…): `docker compose exec app php artisan generate-storage-key`
+1. Generate a key and keep a copy **outside the server** (password manager, safe…): `docker compose exec -u erugo app php artisan generate-storage-key`
 2. Pass it to the container:
    ```yaml
        environment:
          STORAGE_ENCRYPTION_KEY: "base64-key-from-step-1"
    ```
 3. Enable *Encrypt new shares* in *Settings → System settings → Security*.
-4. Optional: encrypt shares created before: `docker compose exec app php artisan encrypt-existing-files`
+4. Optional: encrypt shares created before: `docker compose exec -u erugo app php artisan encrypt-existing-files`
 
 How it works: each file (or the archive of a multi-file share) is encrypted with XChaCha20-Poly1305 (libsodium) in authenticated 1 MiB chunks as soon as the share is created; tampering, truncation or a wrong key are detected. Downloads, byte-range requests and single files inside an archive are decrypted on the fly. Plain and encrypted files can coexist.
 

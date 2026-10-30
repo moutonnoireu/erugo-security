@@ -17,28 +17,18 @@ class TusdHooksController extends Controller
      * tusd sends different hook types: pre-create, post-create, post-receive, post-finish, post-terminate
      * 
      * Security: This endpoint should only be called by the tusd process.
-     * We validate the request comes from localhost or internal Docker network IPs.
+     * Only loopback connections are accepted (see below).
      */
     public function handleHook(Request $request)
     {
-        // Security: Verify request is from internal network (tusd process)
-        $clientIp = $request->ip();
-        $allowedNetworks = [
-            '172.', // Docker bridge networks
-            '10.',  // Private network
-            '192.168.', // Private network
-            '127.0.0.1', // Localhost IPv4
-            '::1', // Localhost IPv6
-        ];
-        
-        $isAllowed = false;
-        foreach ($allowedNetworks as $network) {
-            if (str_starts_with($clientIp, $network)) {
-                $isAllowed = true;
-                break;
-            }
-        }
-        
+        // Security: tusd runs in the same container and calls a listener bound to
+        // the loopback interface; the public listener refuses this path. The
+        // connection address is used directly (not $request->ip(), which follows
+        // X-Forwarded-For when trusted proxies are configured). Private ranges
+        // are not accepted: behind a reverse proxy every visitor comes from one.
+        $clientIp = (string) $request->server('REMOTE_ADDR');
+        $isAllowed = in_array($clientIp, ['127.0.0.1', '::1'], true);
+
         if (!$isAllowed) {
             Log::warning('tusd hook rejected: unauthorized source IP', [
                 'ip' => $clientIp

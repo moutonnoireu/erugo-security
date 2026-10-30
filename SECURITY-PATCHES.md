@@ -27,6 +27,8 @@ Commit hashes refer to the `php-fix` branch.
 |---|---|
 | Unlimited share password guessing | Share download endpoints had no rate limit. Failed password attempts are now limited to 10 per share and IP per 10 minutes. |
 | SMTP credentials readable by any signed-in user | Upstream has no admin check on settings reads: any account, including reverse-share guests, can read `system.smtp` (SMTP password included). The community fix above blocked direct reads but not `GET /api/settings/group/system.*`. Admin-only groups are now refused and filtered out of wildcard reads for non-admins. |
+| tusd hook endpoint open to private networks | `/api/tusd-hooks` (upload bookkeeping, meant for the internal tusd process) accepted any `10.*`, `172.*` or `192.168.*` client, i.e. every visitor when Erugo runs behind a reverse proxy. It is now refused on the public listener, served on an internal loopback listener, and only accepts loopback connections. |
+| Container privileges and headers | Every process runs unprivileged, the code is read-only for the runtime user, and the image runs with a read-only root filesystem and no capabilities. Content-Security-Policy, `Referrer-Policy: no-referrer` (share ids in URLs), Permissions-Policy and COOP headers. |
 
 ### Path traversal & file handling
 | Commit | Fix | Author |
@@ -51,7 +53,7 @@ Commit hashes refer to the `php-fix` branch.
 | `7a39444` | Strip exception details from HTTP error responses | kali2 |
 | `f443830` | Same for `BackupsController` and `TusdHooksController` | kali2 |
 | `00bf471` | Clamp the stats `days` parameter (unbounded DB queries) | kali2 |
-| `eab5a12` | `request_terminate_timeout` in the FPM pool, read/write timeouts on `php_fastcgi` | SIMVIA-lucas-sovre |
+| `eab5a12` | `request_terminate_timeout` in the FPM pool, read/write timeouts on `php_fastcgi` (with FrankenPHP: header read and idle timeouts, bounded wait for a PHP thread) | SIMVIA-lucas-sovre |
 
 ## Image & dependencies
 | Commit | Change |
@@ -60,6 +62,7 @@ Commit hashes refer to the `php-fix` branch.
 | `84e8951` | tusd 2.10.1, twig/twig 3.30.0 (Trivy CRITICAL: grpc, Go stdlib, twig) |
 | `39aa964`, `e0de951`, `fb4e386` | Composer and npm dependency updates (guzzle, phpseclib, commonmark, vite, vue…) |
 | `a38f990` | Dependabot, Trivy scan in CI, weekly upstream sync |
+| — | FrankenPHP (official image, PHP 8.5) instead of Alpine Caddy + php-fpm |
 
 Every image is scanned with Trivy before publishing (build fails on fixable CRITICAL vulnerabilities)
 and rebuilt from scratch every week.

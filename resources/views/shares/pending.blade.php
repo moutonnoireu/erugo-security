@@ -12,11 +12,6 @@
   <title>{{ $settings['application_name'] }}</title>
   @vite('resources/js/app.js')
 
-  <script>
-    function reload() {
-      window.location.reload();
-    }
-  </script>
 
 </head>
 
@@ -44,7 +39,7 @@
           <path d="M6.391 20.279a10 10 0 0 1-2.69-2.7" />
         </svg>Share is being processed</h1>
       <p>Try again in a few moments.</p>
-      <button onclick="reload()">Try again now</button>
+      <form method="get"><button type="submit">Try again now</button></form>
     </div>
   </div>
 </body>
