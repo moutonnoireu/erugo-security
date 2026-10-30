@@ -24,7 +24,7 @@ use Webauthn\PublicKeyCredentialDescriptor;
 use Webauthn\PublicKeyCredentialParameters;
 use Webauthn\PublicKeyCredentialRequestOptions;
 use Webauthn\PublicKeyCredentialRpEntity;
-use Webauthn\PublicKeyCredentialSource;
+use Webauthn\CredentialRecord;
 use Webauthn\PublicKeyCredentialUserEntity;
 
 /**
@@ -247,9 +247,14 @@ class Passkeys
         return $this->serializer()->deserialize(json_encode($credential), PublicKeyCredential::class, 'json');
     }
 
-    private function loadSource(UserPasskey $passkey): PublicKeyCredentialSource
+    /**
+     * Stored credential (public key, counter...). Records written by older
+     * versions of web-auth/webauthn-lib (PublicKeyCredentialSource) use the
+     * same JSON format and load the same way.
+     */
+    private function loadSource(UserPasskey $passkey): CredentialRecord
     {
-        return $this->serializer()->deserialize($passkey->credential_source, PublicKeyCredentialSource::class, 'json');
+        return $this->serializer()->deserialize($passkey->credential_source, CredentialRecord::class, 'json');
     }
 
     private function ceremonies(): CeremonyStepManagerFactory

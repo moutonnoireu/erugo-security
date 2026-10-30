@@ -25,7 +25,7 @@ services:
       - "9998:80"
 ```
 
-Tags: `latest`, and the upstream version it is based on (e.g. `0.2.15`).
+Tags: `latest` (latest release), `0.2.15-sec.1` (a fixed release), `0.2.15` (latest release for that upstream version), `edge` (development branch, not a release). Releases and their notes: [CHANGELOG.md](CHANGELOG.md). Release images are rebuilt every week to pick up Alpine and PHP security updates.
 
 ## Optional security features
 

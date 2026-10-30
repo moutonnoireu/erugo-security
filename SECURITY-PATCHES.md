@@ -26,7 +26,7 @@ Commit hashes refer to the `php-fix` branch.
 | Fix | Details |
 |---|---|
 | Unlimited share password guessing | Share download endpoints had no rate limit. Failed password attempts are now limited to 10 per share and IP per 10 minutes. |
-| SMTP credentials readable by any signed-in user | `GET /api/settings/group/system.*` matched the admin-only `system.smtp` group (SMTP password included). Admin-only groups are now filtered out of wildcard reads for non-admins. |
+| SMTP credentials readable by any signed-in user | Upstream has no admin check on settings reads: any account, including reverse-share guests, can read `system.smtp` (SMTP password included). The community fix above blocked direct reads but not `GET /api/settings/group/system.*`. Admin-only groups are now refused and filtered out of wildcard reads for non-admins. |
 
 ### Path traversal & file handling
 | Commit | Fix | Author |
