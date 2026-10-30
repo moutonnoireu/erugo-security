@@ -78,7 +78,9 @@
     "verify_email": "Vérifier l'e-mail",
     "verifying": "Vérification...",
     "welcome": "Bienvenue",
-    "ip_not_allowed": "La connexion n'est pas autorisée depuis votre réseau."
+    "ip_not_allowed": "La connexion n'est pas autorisée depuis votre réseau.",
+    "altcha_required": "Veuillez d'abord compléter la vérification.",
+    "altcha_failed": "La vérification a échoué ou a expiré. Veuillez réessayer."
   },
   "button": {
     "reverse_share_invite": "Créer une demande de partage inversé",
@@ -865,7 +867,12 @@
         "add_your_ip": "L'ajouter à la liste",
         "ip_allowlist_proxy_help": "Derrière un reverse proxy, définissez la variable d'environnement TRUSTED_PROXIES pour qu'Erugo voie la vraie adresse du client. Bloqué ? Lancez : php artisan disable-ip-allowlist",
         "lockout_error": "Votre adresse IP actuelle ({ip}) n'est pas dans la liste. Ajoutez-la avant d'activer la restriction.",
-        "invalid_entries": "Adresse ou plage IP invalide : {entries}"
+        "invalid_entries": "Adresse ou plage IP invalide : {entries}",
+        "altcha": "Protection anti-robots (ALTCHA)",
+        "altcha_description": "Demander au navigateur de résoudre une courte preuve de travail avant la connexion, la demande de réinitialisation du mot de passe ou la création d'un compte. Auto-hébergé : aucun service tiers, aucun cookie, aucun pistage.",
+        "altcha_enabled": "Exiger la vérification sur les formulaires de connexion",
+        "altcha_difficulty": "Difficulté",
+        "altcha_difficulty_help": "Nombre maximal que le navigateur peut avoir à essayer (de 1 000 à 10 000 000). La valeur par défaut, 100 000, prend bien moins d'une seconde sur un appareil récent. Une valeur plus élevée ralentit autant les robots que les appareils lents."
       }
     },
     "system_auth_provider_info_link": "À propos",
@@ -990,7 +997,8 @@
     "download": {
       "invalid_password": "Le mot de passe du partage est invalide",
       "password_required": "Vous devez saisir le mot de passe pour télécharger ce partage.",
-      "password_required_short": "Entrez le mot de passe"
+      "password_required_short": "Entrez le mot de passe",
+      "too_many_attempts": "Trop de mots de passe incorrects. Réessayez dans quelques minutes."
     },
     "download_limit_reached": "Limite de téléchargement atteinte",
     "download_limit_reached.message": "Le partage que vous essayez de télécharger a atteint sa limite de téléchargement. Veuillez demander au créateur du partage d'augmenter la limite de téléchargement.",

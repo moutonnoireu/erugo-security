@@ -6,6 +6,7 @@ import { useToast } from 'vue-toastification'
 import { domData } from '../domData'
 import { KeyRound, Fingerprint, UserPlus, Mail, ArrowLeft } from 'lucide-vue-next'
 import { store } from '../store'
+import AltchaWidget from './AltchaWidget.vue'
 import {
   login,
   refresh,
@@ -34,6 +35,20 @@ const password_confirmation = ref('')
 const verificationCode = ref('')
 const passwordInput = ref(null)
 const loginMessage = domData().login_message
+// Proof-of-work verification on sign-in forms (enabled by an administrator)
+const altchaEnabled = domData().altcha_enabled === true
+const altchaWidget = ref(null)
+// Returns the payload to send, or false when verification is required but missing
+const getAltchaPayload = async () => {
+  if (!altchaEnabled) return null
+  const payload = await altchaWidget.value?.getPayload()
+  if (!payload) {
+    toast.error(t.value('auth.altcha_required'))
+    return false
+  }
+  return payload
+}
+const resetAltcha = () => altchaWidget.value?.reset()
 const forgotPasswordMode = ref(false)
 const haveResetToken = ref(false)
 const resetToken = ref('')
@@ -116,8 +131,11 @@ const attemptLogin = async () => {
     return
   }
 
+  const altcha = await getAltchaPayload()
+  if (altcha === false) return
+
   try {
-    const data = await login(email.value, password.value)
+    const data = await login(email.value, password.value, altcha)
     store.authSuccess(data)
     toast.success(t.value('auth.login_successful'))
 
@@ -136,9 +154,13 @@ const attemptLogin = async () => {
   } catch (error) {
     if (error.code === 'ip_not_allowed') {
       toast.error(t.value('auth.ip_not_allowed'))
+    } else if (error.code === 'altcha_invalid') {
+      toast.error(t.value('auth.altcha_failed'))
     } else {
       toast.error(t.value('auth.invalid_email_or_password'))
     }
+  } finally {
+    resetAltcha()
   }
 }
 
@@ -177,12 +199,21 @@ const attemptForgotPassword = async () => {
     toast.error(t.value('auth.please_enter_email'))
     return
   }
+  const altcha = await getAltchaPayload()
+  if (altcha === false) return
+
   try {
-    await forgotPassword(email.value)
+    await forgotPassword(email.value, altcha)
     toast.success(t.value('auth.password_reset_email_sent'))
     forgotPasswordMode.value = false
   } catch (error) {
-    toast.error(t.value('auth.failed_to_send_password_reset_email'))
+    toast.error(
+      error.code === 'altcha_invalid'
+        ? t.value('auth.altcha_failed')
+        : t.value('auth.failed_to_send_password_reset_email')
+    )
+  } finally {
+    resetAltcha()
   }
 }
 
@@ -224,9 +255,12 @@ const attemptRegister = async () => {
     return
   }
 
+  const altcha = await getAltchaPayload()
+  if (altcha === false) return
+
   isRegistering.value = true
   try {
-    const result = await registerUser(name.value, email.value, password.value, password_confirmation.value)
+    const result = await registerUser(name.value, email.value, password.value, password_confirmation.value, altcha)
     toast.success(t.value('auth.registration_successful'))
     registrationEmail.value = email.value
     registrationMode.value = false
@@ -236,9 +270,12 @@ const attemptRegister = async () => {
     password.value = ''
     password_confirmation.value = ''
   } catch (error) {
-    toast.error(error.message || t.value('auth.registration_failed'))
+    toast.error(
+      error.code === 'altcha_invalid' ? t.value('auth.altcha_failed') : error.message || t.value('auth.registration_failed')
+    )
   } finally {
     isRegistering.value = false
+    resetAltcha()
   }
 }
 
@@ -264,14 +301,20 @@ const attemptVerifyEmail = async () => {
 }
 
 const attemptResendCode = async () => {
+  const altcha = await getAltchaPayload()
+  if (altcha === false) return
+
   isResending.value = true
   try {
-    await resendVerificationCode(registrationEmail.value)
+    await resendVerificationCode(registrationEmail.value, altcha)
     toast.success(t.value('auth.verification_code_resent'))
   } catch (error) {
-    toast.error(error.message || t.value('auth.failed_to_resend_code'))
+    toast.error(
+      error.code === 'altcha_invalid' ? t.value('auth.altcha_failed') : error.message || t.value('auth.failed_to_resend_code')
+    )
   } finally {
     isResending.value = false
+    resetAltcha()
   }
 }
 
@@ -304,6 +347,7 @@ const switchToLogin = () => {
           class="verification-code-input"
         />
       </div>
+      <AltchaWidget v-if="altchaEnabled" ref="altchaWidget" />
       <div class="row mt-3 align-items-center w-100">
         <div class="col-12 ps-0 pe-0 mb-2">
           <button class="block" @click="attemptVerifyEmail" :disabled="isVerifying">
@@ -350,6 +394,7 @@ const switchToLogin = () => {
             ref="passwordInput"
           />
         </div>
+        <AltchaWidget v-if="altchaEnabled" ref="altchaWidget" />
         <div class="row mt-3 align-items-center w-100">
           <div class="col-6 ps-0">
             <button class="block" @click="attemptLogin">
@@ -394,6 +439,7 @@ const switchToLogin = () => {
           <label for="email">{{ $t('auth.email') }}</label>
           <input type="text" v-model="email" :placeholder="$t('auth.email')" @keyup.enter="attemptForgotPassword" />
         </div>
+        <AltchaWidget v-if="altchaEnabled" ref="altchaWidget" />
         <div class="row mt-3 align-items-center w-100">
           <div class="col-6 ps-0">
             <button class="block" @click="attemptForgotPassword">
@@ -432,6 +478,7 @@ const switchToLogin = () => {
             @keyup.enter="attemptRegister"
           />
         </div>
+        <AltchaWidget v-if="altchaEnabled" ref="altchaWidget" />
         <div class="row mt-3 align-items-center w-100">
           <div class="col-6 ps-0">
             <button class="block" @click="attemptRegister" :disabled="isRegistering">

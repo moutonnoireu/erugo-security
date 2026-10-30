@@ -37,6 +37,8 @@ onMounted(() => {
         toast.error(t.value('share.download.password_required'))
       } else if (errorMessage == 'invalid_password') {
         toast.error(t.value('share.download.invalid_password'))
+      } else if (errorMessage == 'too_many_attempts') {
+        toast.error(t.value('share.download.too_many_attempts'))
       }
     }
   }, 100)

@@ -460,6 +460,22 @@ class SettingsSeeder extends Seeder
                 'group' => 'system.security',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'key' => 'altcha_enabled',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.security',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'altcha_max_number',
+                'value' => '100000',
+                'previous_value' => null,
+                'group' => 'system.security',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
 
         ]);

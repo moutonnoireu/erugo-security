@@ -44,6 +44,14 @@ Only allow signing in from a list of IPv4/IPv6 addresses or CIDR ranges. Shared 
       TRUSTED_PROXIES: "172.16.0.0/12"   # e.g. your Docker network / proxy address
 ```
 
+### Bot protection (ALTCHA)
+
+Self-hosted [ALTCHA](https://altcha.org) proof-of-work on the sign-in, password reset, registration and resend-code forms: the browser solves a short puzzle before the form is accepted. No third-party service, no cookies, no tracking. Challenges are signed with a key derived from `APP_KEY`, expire after 10 minutes and are accepted once. The difficulty is adjustable.
+
+### Share password guessing
+
+Always on: after 10 wrong passwords for the same share from the same IP, further attempts are refused for 10 minutes.
+
 ## Migrate from `wardy784/erugo`
 
 1. Back up your `storage` folder (and your database if it is external).
