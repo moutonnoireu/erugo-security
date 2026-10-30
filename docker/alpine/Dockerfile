@@ -1,8 +1,10 @@
-# PHP version of the final image (Alpine packages phpXY-*)
-ARG PHP_VERSION=85
+# PHP version of the final image (FrankenPHP image tag phpX.Y)
+ARG PHP_VERSION=8.5
+# FrankenPHP major version (tag of the dunglas/frankenphp image)
+ARG FRANKENPHP_VERSION=1
 
 # Build Stage for PHP dependencies (vendor/ is architecture independent)
-FROM --platform=$BUILDPLATFORM php:8.5-cli-alpine AS composer
+FROM --platform=$BUILDPLATFORM php:${PHP_VERSION}-cli-alpine AS composer
 WORKDIR /app
 # Composer from its official image instead of piping an installer script into php
 COPY --from=composer/composer:2-bin /composer /usr/local/bin/composer
@@ -21,14 +23,13 @@ RUN npm ci && \
     npx vite build \
     && rm -rf node_modules
 
-# Final production image
-FROM alpine:3.24
+# Final production image: FrankenPHP (Caddy with PHP built in) replaces Caddy + php-fpm
+FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php${PHP_VERSION}-alpine
 
 LABEL maintainer="Dean Ward"
 
 # Multi-arch support - TARGETARCH is automatically set by Docker buildx
 ARG TARGETARCH
-ARG PHP_VERSION
 
 # Version passed from build system (e.g., Komodo)
 ARG VERSION=unknown
@@ -37,51 +38,43 @@ ENV APP_VERSION=${VERSION}
 WORKDIR /var/www/html
 
 ENV TZ=UTC
-ENV SUPERVISOR_PHP_FPM_COMMAND="/usr/sbin/php-fpm -F"
-ENV SUPERVISOR_CADDY_COMMAND="/usr/sbin/caddy run --config /etc/caddy/Caddyfile"
-ENV SUPERVISOR_PHP_USER="erugo"
+# Port Erugo listens on inside the container. 80 keeps existing port mappings
+# working; set 8080 (or any port >= 1024) on runtimes that do not let
+# unprivileged processes bind low ports (Kubernetes, old Docker versions).
+ENV ERUGO_PORT=80
+# Caddy state lives in /tmp so the root filesystem can be mounted read-only
+ENV XDG_CONFIG_HOME=/tmp/caddy/config \
+    XDG_DATA_HOME=/tmp/caddy/data
 
-# Enable community repository for PHP packages
-RUN echo "http://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories
+# Runtime packages, and security fixes of the base image packages
+RUN apk upgrade --no-cache && \
+    apk add --no-cache \
+      curl \
+      ffmpeg \
+      su-exec \
+      supervisor \
+      tzdata \
+      zip
 
-# Install production requirements
-RUN apk add --no-cache \
-    curl \
-    su-exec \
-    sudo \
-    supervisor \
-    cronie \
-    ffmpeg \
-    php${PHP_VERSION} \
-    php${PHP_VERSION}-pdo_pgsql \
-    php${PHP_VERSION}-pdo_sqlite \
-    php${PHP_VERSION}-gd \
-    php${PHP_VERSION}-curl \
-    php${PHP_VERSION}-pdo_mysql \
-    php${PHP_VERSION}-mbstring \
-    php${PHP_VERSION}-xml \
-    php${PHP_VERSION}-zip \
-    php${PHP_VERSION}-bcmath \
-    php${PHP_VERSION}-soap \
-    php${PHP_VERSION}-intl \
-    php${PHP_VERSION}-ldap \
-    php${PHP_VERSION}-pecl-redis \
-    php${PHP_VERSION}-pecl-memcached \
-    php${PHP_VERSION}-phar \
-    php${PHP_VERSION}-openssl \
-    php${PHP_VERSION}-dom \
-    php${PHP_VERSION}-tokenizer \
-    php${PHP_VERSION}-fileinfo \
-    php${PHP_VERSION}-sodium \
-    tzdata \
-    libcap \
-    zip \
-    php${PHP_VERSION}-fpm \
-    caddy \
-    && ln -sf /usr/bin/php${PHP_VERSION} /usr/bin/php \
-    && ln -sf /usr/sbin/php-fpm${PHP_VERSION} /usr/sbin/php-fpm \
-    && ln -sfn /etc/php${PHP_VERSION} /etc/php \
-    && rm -rf /var/cache/apk/*
+# PHP extensions not compiled into the official PHP image
+RUN install-php-extensions \
+      bcmath \
+      gd \
+      intl \
+      ldap \
+      memcached \
+      pcntl \
+      pdo_mysql \
+      pdo_pgsql \
+      redis \
+      soap \
+      zip && \
+    cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# The base image gives frankenphp the cap_net_bind_service file capability.
+# Drop it: the server runs unprivileged, and a binary with file capabilities
+# cannot even start under `cap_drop: [ALL]` / no-new-privileges.
+RUN setcap -r /usr/local/bin/frankenphp 2>/dev/null || true; frankenphp version
 
 # Download and install tusd for the correct architecture.
 # tusd publishes no checksum file: the SHA-256 of each archive is pinned here,
@@ -101,43 +94,40 @@ RUN case "${TARGETARCH}" in \
     chmod +x /usr/local/bin/tusd && \
     rm -rf /tmp/tusd.tar.gz /tmp/tusd_linux_${TARGETARCH}
 
-# Create necessary directories
-RUN mkdir -p /run/php /var/www/html/public /etc/php/php-fpm.d /etc/caddy
-
-COPY ./docker/alpine/www.conf /etc/php/php-fpm.d/www.conf
-COPY ./docker/alpine/Caddyfile /etc/caddy/Caddyfile
-
 # Set timezone
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Configure PHP capabilities
-RUN setcap "cap_net_bind_service=+ep" /usr/bin/php${PHP_VERSION}
+# Unprivileged user running every process (fixed ids, same as previous images)
+RUN addgroup -g 1000 erugo && \
+    adduser -D -u 1000 -G erugo erugo
 
-# Create erugo user and group
-RUN addgroup erugo && \
-    adduser -D -G erugo erugo
-
-# Set permissions
-RUN chown -R erugo:erugo /run/php
-
-# Copy necessary files from build stages and local context
-COPY --chown=erugo:erugo . /var/www/html/
+# Application code is owned by root and read-only for the erugo user:
+# a compromised PHP process cannot modify the code it runs.
+COPY . /var/www/html/
 COPY --from=composer /app/vendor /var/www/html/vendor
 COPY --from=node /app/public/build /var/www/html/public/build
-RUN rm -rf /var/www/html/.env /var/www/html/.git /var/www/html/node_modules /var/www/html/storage
+RUN rm -rf /var/www/html/.env /var/www/html/.git /var/www/html/node_modules /var/www/html/storage /var/www/html/public/hot && \
+    # public links into the storage volume (were created at every start)
+    ln -s ../storage/app/public /var/www/html/public/storage && \
+    ln -s ../storage/app/backgrounds /var/www/html/public/backgrounds && \
+    ln -s ../storage/app/public/images /var/www/html/public/images && \
+    # package manifest built now, so bootstrap/cache does not need to be writable
+    cp -r /var/www/html/storage_skell /var/www/html/storage && \
+    php artisan package:discover --ansi && \
+    rm -rf /var/www/html/storage && \
+    chown -R erugo:erugo /var/www/html/bootstrap/cache
 
-# Set up Laravel scheduler cron job
-RUN echo "* * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1" | crontab -u erugo -
-
-# Copy configuration files
+# Configuration files
+COPY ./docker/alpine/Caddyfile /etc/frankenphp/Caddyfile
 COPY ./docker/alpine/start-container /usr/local/bin/start-container
 COPY ./docker/alpine/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY ./docker/alpine/php.ini /etc/php/conf.d/99-erugo.ini
-RUN chmod +x /usr/local/bin/start-container
-
-# Create supervisor log directory
-RUN mkdir -p /var/log/supervisor
+COPY ./docker/alpine/php.ini $PHP_INI_DIR/conf.d/99-erugo.ini
+RUN chmod 755 /usr/local/bin/start-container
 
 EXPOSE 80/tcp
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -fsS "http://127.0.0.1:${ERUGO_PORT}/api/health" > /dev/null || exit 1
+
 ENTRYPOINT ["start-container"]
+CMD []

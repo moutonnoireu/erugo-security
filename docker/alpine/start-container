@@ -1,5 +1,12 @@
 #!/bin/sh
+# Erugo container entrypoint.
+#
+# Started as root (the default), it only fixes the ownership of the storage
+# volume, then re-runs itself as the unprivileged erugo user. Started directly
+# as erugo (`user: "1000:1000"`), it skips that step: the volume must then
+# already belong to uid 1000.
 
+banner() {
 echo "Erugo is starting..."
 echo "================================================"
 
@@ -20,9 +27,30 @@ EOF
 
 echo "https://erugo.app"
 echo "================================================"
+}
 
+if [ "$(id -u)" = "0" ]; then
+    banner
+    mkdir -p /var/www/html/storage
+    echo "Setting storage permissions..."
+    # only touch what is not already owned by erugo (fast on large volumes)
+    find /var/www/html/storage \( ! -user erugo -o ! -group erugo \) -exec chown -h erugo:erugo {} +
+    export ERUGO_BANNER_SHOWN=1
+    exec su-exec erugo:erugo "$0" "$@"
+fi
 
+[ -n "$ERUGO_BANNER_SHOWN" ] || banner
 
+if [ ! -w /var/www/html/storage ]; then
+    echo "ERROR: /var/www/html/storage is not writable by uid $(id -u)." >&2
+    echo "Mount a volume there owned by 1000:1000, or start the container as root once to fix it." >&2
+    exit 1
+fi
+
+cd /var/www/html
+export ERUGO_PORT="${ERUGO_PORT:-80}"
+# keys, database and uploads are not readable by other users of the container
+umask 0027
 
 export APP_URL=/
 export ASSET_URL=/
@@ -79,17 +107,6 @@ else
     fi
 fi
 
-# Always ensure correct permissions on storage directory
-echo "Setting storage permissions..."
-chown -R erugo:erugo /var/www/html/storage
-
-# Make sure php-fpm run directory exists and has correct permissions
-mkdir -p /run/php
-chown -R erugo:erugo /run/php
-
-# Make sure public directory has correct permissions
-chown -R erugo:erugo /var/www/html/public
-
 # if the app.key file exists, load its contents into the environment as APP_KEY, otherwise generate a new one
 if [ -f /var/www/html/storage/app.key ]; then
     echo "App key already exists, loading..."
@@ -97,7 +114,7 @@ if [ -f /var/www/html/storage/app.key ]; then
 else
     # generate app key
     echo "Generating app key..."
-    su-exec erugo php artisan key:generate --force --show >/var/www/html/storage/app.key
+    php artisan key:generate --force --show >/var/www/html/storage/app.key
     echo "App key generated, loading..."
     export APP_KEY=$(cat /var/www/html/storage/app.key)
 fi
@@ -108,7 +125,7 @@ if [ -f /var/www/html/storage/jwt.secret ]; then
     export JWT_SECRET=$(cat /var/www/html/storage/jwt.secret)
 else
     echo "Generating JWT secret..."
-    su-exec erugo php -r "echo base64_encode(random_bytes(32));" >/var/www/html/storage/jwt.secret
+    php -r "echo base64_encode(random_bytes(32));" >/var/www/html/storage/jwt.secret
     echo "JWT secret generated, loading..."
     export JWT_SECRET=$(cat /var/www/html/storage/jwt.secret)
 fi
@@ -120,46 +137,34 @@ if [ -z "$DB_CONNECTION" ]; then
     export DB_DATABASE=./storage/app/private/database.sqlite
 fi
 
-# Create an environment file for cron jobs
-echo "Creating environment file for cron jobs..."
-env | grep -E "^(APP_|DB_|REDIS_|MAIL_|QUEUE_|JWT_|ASSET_)" | sed 's/=\(.*\)/="\1"/' > /var/www/html/.env
-
-# Create a temporary crontab file
-echo "* * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1" > /tmp/erugo-crontab
-
-# Prevent crontab from complaining about the cache directory
-mkdir -p /root/.cache/crontab
-
-# Install the crontab for the erugo user
-crontab -u erugo /tmp/erugo-crontab
-
-# Clean up
-rm /tmp/erugo-crontab
-
 # Always run migrations
 echo "Running migrations..."
-su-exec erugo php artisan migrate --force
+php artisan migrate --force
 
 echo "Running seeds..."
-su-exec erugo php artisan db:seed --force
+php artisan db:seed --force
 
 echo "Clearing settings cache..."
-su-exec erugo php artisan clear-settings-cache
+php artisan clear-settings-cache
 
 echo "Clearing templates cache..."
-su-exec erugo php artisan view:clear
+php artisan view:clear
 
-echo "Clearing config cache..."
-su-exec erugo php artisan config:clear
+# bootstrap/cache is read-only when the root filesystem is: the image ships
+# a fresh package manifest and nothing else is cached there
+if [ -w /var/www/html/bootstrap/cache ]; then
+    echo "Clearing config cache..."
+    php artisan config:clear
 
-echo "Clearing route cache..."
-su-exec erugo php artisan route:clear
+    echo "Clearing route cache..."
+    php artisan route:clear
 
-echo "Clearing compiled classes..."
-su-exec erugo php artisan clear-compiled
+    echo "Clearing compiled classes..."
+    php artisan clear-compiled
+fi
 
 echo "Updating legacy share paths..."
-su-exec erugo php artisan update-legacy-share-paths
+php artisan update-legacy-share-paths
 
 # Migrate backgrounds from old storage location (storage/app/public/backgrounds) to new location (storage/app/backgrounds)
 if [ -d /var/www/html/storage/app/public/backgrounds ] && [ "$(ls -A /var/www/html/storage/app/public/backgrounds 2>/dev/null)" ]; then
@@ -172,25 +177,5 @@ if [ -d /var/www/html/storage/app/public/backgrounds ] && [ "$(ls -A /var/www/ht
     echo "Backgrounds migration complete."
 fi
 
-# Create symlinks for public assets (images, backgrounds) pointing to storage
-echo "Creating storage symlinks..."
-# Remove any existing symlinks or directories that conflict
-rm -rf /var/www/html/public/storage 2>/dev/null || true
-rm -rf /var/www/html/public/backgrounds 2>/dev/null || true
-rm -rf /var/www/html/public/images 2>/dev/null || true
-
-# Create relative symlinks (works consistently in Docker and development)
-cd /var/www/html/public
-ln -s ../storage/app/public storage
-ln -s ../storage/app/backgrounds backgrounds
-ln -s ../storage/app/public/images images
-cd /var/www/html
-
-# Ensure correct ownership of symlinked directories
-chown -R erugo:erugo /var/www/html/storage/app/public
-chown -R erugo:erugo /var/www/html/storage/app/backgrounds
-
 echo "Starting services..."
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
-
-echo "================================================"

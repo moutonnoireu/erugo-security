@@ -1,78 +1,91 @@
-# Basic Caddyfile for Laravel
-:80 {
-    root * /var/www/html/public
+{
+	frankenphp
+	# no admin API, no automatic certificates (TLS is terminated by your reverse proxy)
+	admin off
+	auto_https off
+	persist_config off
+	skip_install_trust
+	log {
+		output stderr
+		level WARN
+	}
+}
 
-    # Allow large file uploads (500MB)
-    request_body {
-        max_size 500MB
-    }
+# Internal listener for tusd hooks: only reachable from inside the container
+http://127.0.0.1:1081 {
+	root * /var/www/html/public
+	@hooks path /api/tusd-hooks
+	handle @hooks {
+		rewrite * /index.php
+		php
+	}
+	handle {
+		respond 404
+	}
+}
 
-    # Enable Gzip compression
-    encode gzip
-    
-    # Simplified logging
-    log {
-        output file /var/www/html/storage/logs/caddy.log
-        format json
-    }
-    
-    # Provide security headers
-    header {
-        # Security headers
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        X-XSS-Protection "1; mode=block"
-        
-        # Remove server header
-        -Server
-    }
+:{$ERUGO_PORT:80} {
+	root * /var/www/html/public
 
-    # Cache static build assets (Vite-generated with hashes in filenames)
-    @build_assets {
-        path /build/*
-    }
-    header @build_assets Cache-Control "public, max-age=31536000, immutable"
+	# Allow large file uploads (500MB)
+	request_body {
+		max_size 500MB
+	}
 
-    # Cache other static assets with shorter duration (user-uploadable content)
-    @static {
-        path *.ico *.css *.js *.gif *.jpg *.jpeg *.png *.svg *.woff *.woff2 *.ttf *.eot *.mp4 *.webm *.webp
-        not path /build/*
-        not path /images/*
-        not path /backgrounds/*
-        not path /storage/*
-    }
-    header @static Cache-Control "public, max-age=86400"
+	encode zstd gzip
 
-    # User-uploadable assets (logos, backgrounds) - short cache, allow revalidation
-    @user_assets {
-        path /images/* /backgrounds/* /storage/*
-    }
-    header @user_assets Cache-Control "public, max-age=300, must-revalidate"
+	log {
+		output file /var/www/html/storage/logs/caddy.log
+		format json
+	}
 
-    # Proxy tusd uploads - must be handled before Laravel catches it
-    handle /files/* {
-        reverse_proxy localhost:8080 {
-            header_up X-Forwarded-Proto {header.X-Forwarded-Proto}
-            header_up X-Forwarded-Host {header.X-Forwarded-Host}
-        }
-    }
+	header {
+		# HSTS is ignored by browsers over plain HTTP; no includeSubDomains/preload,
+		# which would impose HTTPS on every other host of your domain
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		# share links carry their id in the URL: never leak it to other sites
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+		-X-Powered-By
+		-Server
+	}
 
-    # Handle everything else with Laravel
-    handle {
-        # Handle static files first
-        file_server {
-            index index.php
-        }
-        
-        # Handle Laravel's front controller pattern
-        try_files {path} {path}/ /index.php?{query}
-        
-        # Enable PHP processing
-        php_fastcgi unix//run/php/php-fpm.sock {
-            read_timeout 310s
-            write_timeout 310s
-        }
-    }
+	# Cache static build assets (Vite-generated with hashes in filenames)
+	@build_assets path /build/*
+	header @build_assets Cache-Control "public, max-age=31536000, immutable"
+
+	# Cache other static assets with shorter duration (user-uploadable content)
+	@static {
+		path *.ico *.css *.js *.gif *.jpg *.jpeg *.png *.svg *.woff *.woff2 *.ttf *.eot *.mp4 *.webm *.webp
+		not path /build/*
+		not path /images/*
+		not path /backgrounds/*
+		not path /storage/*
+	}
+	header @static Cache-Control "public, max-age=86400"
+
+	# User-uploadable assets (logos, backgrounds) - short cache, allow revalidation
+	@user_assets path /images/* /backgrounds/* /storage/*
+	header @user_assets Cache-Control "public, max-age=300, must-revalidate"
+
+	# tusd hooks are internal only
+	@hooks path /api/tusd-hooks /api/tusd-hooks/*
+	respond @hooks 404
+
+	# tusd uploads - must be handled before Laravel catches it
+	handle /files/* {
+		reverse_proxy 127.0.0.1:1080 {
+			header_up X-Forwarded-Proto {header.X-Forwarded-Proto}
+			header_up X-Forwarded-Host {header.X-Forwarded-Host}
+		}
+	}
+
+	# Everything else: static files, then Laravel's front controller
+	handle {
+		php_server
+	}
 }
