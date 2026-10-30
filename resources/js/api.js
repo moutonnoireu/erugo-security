@@ -772,7 +772,7 @@ export const saveSettingsById = async (settings) => {
   return data.data
 }
 
-export const getClientIp = async () => {
+export const getSecurityStatus = async () => {
   const response = await fetchWithAuth(`${apiUrl}/api/settings/client-ip`, {
     method: 'GET',
     headers: {
@@ -783,7 +783,7 @@ export const getClientIp = async () => {
   if (!response.ok) {
     throw new Error(data.message)
   }
-  return data.data.ip
+  return data.data
 }
 
 export const saveLogo = async (logoFile) => {

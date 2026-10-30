@@ -888,7 +888,14 @@
         "altcha_description": "Demander au navigateur de résoudre une courte preuve de travail avant la connexion, la demande de réinitialisation du mot de passe ou la création d'un compte. Auto-hébergé : aucun service tiers, aucun cookie, aucun pistage.",
         "altcha_enabled": "Exiger la vérification sur les formulaires de connexion",
         "altcha_difficulty": "Difficulté",
-        "altcha_difficulty_help": "Nombre maximal que le navigateur peut avoir à essayer (de 1 000 à 10 000 000). La valeur par défaut, 100 000, prend bien moins d'une seconde sur un appareil récent. Une valeur plus élevée ralentit autant les robots que les appareils lents."
+        "altcha_difficulty_help": "Nombre maximal que le navigateur peut avoir à essayer (de 1 000 à 10 000 000). La valeur par défaut, 100 000, prend bien moins d'une seconde sur un appareil récent. Une valeur plus élevée ralentit autant les robots que les appareils lents.",
+        "encryption": "Chiffrement des fichiers stockés",
+        "encryption_description": "Chiffrer les fichiers partagés sur le disque (XChaCha20-Poly1305) dès la création du partage. Une copie du volume de stockage ou d'une sauvegarde est illisible sans la clé, conservée hors d'Erugo dans la variable d'environnement STORAGE_ENCRYPTION_KEY. Les téléchargements sont déchiffrés à la volée.",
+        "encryption_key_ok": "Clé de chiffrement configurée.",
+        "encryption_key_absent": "Aucune clé de chiffrement : définissez d'abord STORAGE_ENCRYPTION_KEY (à générer avec : php artisan generate-storage-key).",
+        "encryption_enabled": "Chiffrer les nouveaux partages",
+        "encryption_help": "Conservez une copie de la clé en lieu sûr : sans elle, les fichiers chiffrés sont perdus. Les partages existants ne changent pas ; chiffrez-les avec php artisan encrypt-existing-files. Pour arrêter le chiffrement, décochez cette case puis lancez php artisan decrypt-files avant de retirer la clé.",
+        "encryption_key_missing": "Définissez la variable d'environnement STORAGE_ENCRYPTION_KEY avant d'activer le chiffrement."
       }
     },
     "system_auth_provider_info_link": "À propos",

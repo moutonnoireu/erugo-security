@@ -22,7 +22,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: pdo_sqlite, gd, intl, zip, mbstring, bcmath, curl, openssl, fileinfo
+          extensions: pdo_sqlite, gd, intl, zip, mbstring, bcmath, curl, openssl, fileinfo, sodium
           tools: composer:v2
           coverage: none
 
@@ -43,3 +43,27 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx vite build
+
+  # Build the image from the PR (no push) so Dockerfile changes are checked before merging
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/alpine/Dockerfile
+          platforms: linux/amd64
+          pull: true
+          load: true
+          tags: erugo-pr:ci
+          cache-from: type=gha
+      - name: Smoke test
+        run: |
+          docker run --rm --entrypoint php erugo-pr:ci -v
+          MODULES=$(docker run --rm --entrypoint php erugo-pr:ci -m)
+          for ext in pdo_sqlite pdo_mysql pdo_pgsql gd intl zip mbstring curl openssl sodium; do
+            echo "$MODULES" | grep -qix "$ext" || { echo "::error::Missing PHP extension: $ext"; exit 1; }
+          done

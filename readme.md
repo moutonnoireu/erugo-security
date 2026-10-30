@@ -58,6 +58,26 @@ Opt-in per user, in *Settings → My Account → Two-factor authentication*:
 
 Turning a factor off needs the current password. Admins can reset a user who lost their device (*Users → Reset 2FA*), or from the command line: `docker compose exec app php artisan reset-2fa user@example.com`. Sign-in through an external provider (Google, Microsoft, Authentik, OIDC) relies on that provider's own MFA.
 
+### Encryption of stored files
+
+Shared files can be encrypted on disk, so that a copy of the storage volume or of a backup is unreadable on its own.
+
+1. Generate a key and keep a copy **outside the server** (password manager, safe…): `docker compose exec app php artisan generate-storage-key`
+2. Pass it to the container:
+   ```yaml
+       environment:
+         STORAGE_ENCRYPTION_KEY: "base64-key-from-step-1"
+   ```
+3. Enable *Encrypt new shares* in *Settings → System settings → Security*.
+4. Optional: encrypt shares created before: `docker compose exec app php artisan encrypt-existing-files`
+
+How it works: each file (or the archive of a multi-file share) is encrypted with XChaCha20-Poly1305 (libsodium) in authenticated 1 MiB chunks as soon as the share is created; tampering, truncation or a wrong key are detected. Downloads, byte-range requests and single files inside an archive are decrypted on the fly. Plain and encrypted files can coexist.
+
+> [!WARNING]
+> **Losing the key means losing the encrypted files.** To stop encrypting: untick the setting, run `php artisan decrypt-files`, and only then remove the key.
+
+Not covered: uploads still in progress (they are encrypted once the share is created, then the temporary upload files are deleted) and the database (share names, file names, settings).
+
 ### Share password guessing
 
 Always on: after 10 wrong passwords for the same share from the same IP, further attempts are refused for 10 minutes.

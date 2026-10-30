@@ -17,6 +17,9 @@ use App\Services\PatternGenerator;
 use App\Jobs\cleanSpecificShares;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Services\StorageEncryption;
+use App\Services\StoredFileResponse;
+use App\Services\ZipEntryReader;
 
 class SharesController extends Controller
 {
@@ -228,9 +231,11 @@ class SharesController extends Controller
 
         $this->createDownloadRecord($share);
 
-        return response()->download(
+        return app(StoredFileResponse::class)->download(
+          request(),
           $sharePath . '/' . $share->files[0]->name,
-          $this->sanitizeDownloadFilename($share->files[0]->display_name)
+          $this->sanitizeDownloadFilename($share->files[0]->display_name),
+          $share->files[0]->type
         );
       } else {
         return redirect()->to('/shares/' . $shareId);
@@ -253,9 +258,11 @@ class SharesController extends Controller
       if (file_exists($filename)) {
         $this->createDownloadRecord($share);
 
-        return response()->download(
+        return app(StoredFileResponse::class)->download(
+          request(),
           $filename,
-          $this->sanitizeDownloadFilename($share->name ?? '', 'share') . '.zip'
+          $this->sanitizeDownloadFilename($share->name ?? '', 'share') . '.zip',
+          'application/zip'
         );
       } else {
         //something went wrong, show the failed view
@@ -344,9 +351,11 @@ class SharesController extends Controller
 
         if (file_exists($resolvedFilePath)) {
           $this->createDownloadRecord($share);
-          return response()->download(
+          return app(StoredFileResponse::class)->download(
+            request(),
             $resolvedFilePath,
-            $this->sanitizeDownloadFilename($file->display_name)
+            $this->sanitizeDownloadFilename($file->display_name),
+            $file->type
           );
         }
       }
@@ -381,6 +390,27 @@ class SharesController extends Controller
 
     // Build the path as it exists in the zip (using sanitized name)
     $zipFilePath = $foundFile->full_path ? $foundFile->full_path . '/' . $foundFile->name : $foundFile->name;
+
+    // Archive encrypted at rest: read the entry through the decrypting reader
+    if (StorageEncryption::isEncrypted($zipPath)) {
+      try {
+        $zipReader = new ZipEntryReader(app(StorageEncryption::class)->open($zipPath));
+        $entry = $zipReader->find($zipFilePath) ?? $zipReader->find($foundFile->name);
+      } catch (\Throwable $e) {
+        \Log::error('Cannot read encrypted share archive: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to open archive'], 500);
+      }
+      if (!$entry) {
+        return response()->json(['error' => 'File not found in archive'], 404);
+      }
+      $this->createDownloadRecord($share);
+      return app(StoredFileResponse::class)->zipEntry(
+        $zipReader,
+        $entry,
+        $this->sanitizeDownloadFilename($foundFile->display_name),
+        $foundFile->type ?? 'application/octet-stream'
+      );
+    }
 
     // Open the zip and stream the file
     $zip = new \ZipArchive();

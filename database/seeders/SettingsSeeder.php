@@ -476,6 +476,14 @@ class SettingsSeeder extends Seeder
                 'group' => 'system.security',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'key' => 'storage_encryption_enabled',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.security',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
 
         ]);

@@ -78,3 +78,71 @@ Artisan::command('reset-2fa {email}', function (string $email) {
     $this->info('Two-factor authentication removed for ' . $email . '.');
     return 0;
 })->purpose('Remove every second factor (authenticator app, passkeys, recovery codes) of a user');
+
+// ----- encryption at rest of shared files -----
+
+Artisan::command('generate-storage-key', function () {
+    $this->line(\App\Services\StorageEncryption::generateKey());
+    $this->comment('Set it as STORAGE_ENCRYPTION_KEY and keep a copy outside the server: without it, encrypted files cannot be read.');
+})->purpose('Generate a key for STORAGE_ENCRYPTION_KEY');
+
+$shareFiles = function (): \Generator {
+    $root = storage_path('app/shares');
+    if (!is_dir($root)) {
+        return;
+    }
+    $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+        if ($file->isFile() && !str_ends_with($file->getFilename(), '-tmp')) {
+            yield $file->getPathname();
+        }
+    }
+};
+
+Artisan::command('encrypt-existing-files', function () use ($shareFiles) {
+    $encryption = app(\App\Services\StorageEncryption::class);
+    if (!$encryption->hasKey()) {
+        $this->error('STORAGE_ENCRYPTION_KEY is missing or invalid.');
+        return 1;
+    }
+    $done = 0;
+    $failed = 0;
+    foreach ($shareFiles() as $path) {
+        if (\App\Services\StorageEncryption::isEncrypted($path)) {
+            continue;
+        }
+        try {
+            $encryption->encryptFile($path);
+            $done++;
+        } catch (\Throwable $e) {
+            $failed++;
+            $this->error($path . ': ' . $e->getMessage());
+        }
+    }
+    $this->info("Encrypted {$done} file(s)" . ($failed ? ", {$failed} failed." : '.'));
+    return $failed ? 1 : 0;
+})->purpose('Encrypt the shared files that are still stored in plain text');
+
+Artisan::command('decrypt-files', function () use ($shareFiles) {
+    $encryption = app(\App\Services\StorageEncryption::class);
+    if (!$encryption->hasKey()) {
+        $this->error('STORAGE_ENCRYPTION_KEY is missing or invalid.');
+        return 1;
+    }
+    $done = 0;
+    $failed = 0;
+    foreach ($shareFiles() as $path) {
+        if (!\App\Services\StorageEncryption::isEncrypted($path)) {
+            continue;
+        }
+        try {
+            $encryption->decryptFile($path);
+            $done++;
+        } catch (\Throwable $e) {
+            $failed++;
+            $this->error($path . ': ' . $e->getMessage());
+        }
+    }
+    $this->info("Decrypted {$done} file(s)" . ($failed ? ", {$failed} failed." : '.'));
+    return $failed ? 1 : 0;
+})->purpose('Decrypt every encrypted shared file (before removing STORAGE_ENCRYPTION_KEY)');

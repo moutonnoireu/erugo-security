@@ -909,7 +909,14 @@
         "altcha_description": "Ask browsers to solve a short proof-of-work puzzle before signing in, requesting a password reset or creating an account. Self-hosted: no third-party service, no cookies, no tracking.",
         "altcha_enabled": "Require verification on sign-in forms",
         "altcha_difficulty": "Difficulty",
-        "altcha_difficulty_help": "Highest number the browser may have to try (1,000 to 10,000,000). The default, 100,000, takes well under a second on a recent device. Higher values slow down bots and slow devices alike."
+        "altcha_difficulty_help": "Highest number the browser may have to try (1,000 to 10,000,000). The default, 100,000, takes well under a second on a recent device. Higher values slow down bots and slow devices alike.",
+        "encryption": "Encryption of stored files",
+        "encryption_description": "Encrypt shared files on disk (XChaCha20-Poly1305) as soon as a share is created. A copy of the storage volume or of a backup cannot be read without the key, which is kept outside Erugo in the STORAGE_ENCRYPTION_KEY environment variable. Downloads are decrypted on the fly.",
+        "encryption_key_ok": "Encryption key configured.",
+        "encryption_key_absent": "No encryption key: set STORAGE_ENCRYPTION_KEY first (generate one with: php artisan generate-storage-key).",
+        "encryption_enabled": "Encrypt new shares",
+        "encryption_help": "Keep a copy of the key somewhere safe: without it, encrypted files are lost. Existing shares stay as they are; encrypt them with php artisan encrypt-existing-files. To stop encrypting, untick this box, then run php artisan decrypt-files before removing the key.",
+        "encryption_key_missing": "Set the STORAGE_ENCRYPTION_KEY environment variable before enabling encryption."
       }
     },
     "system_auth_provider_info_link": "About {name}",
