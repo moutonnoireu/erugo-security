@@ -100,6 +100,51 @@ class TwoFactorController extends Controller
         return $this->respondWithToken($user);
     }
 
+    // ===== passwordless sign-in with a passkey ============================
+
+    public function passwordlessOptions(Passkeys $passkeys): JsonResponse
+    {
+        if (!$this->passwordlessEnabled()) {
+            return response()->json(['status' => 'error', 'message' => 'Passkey sign-in is not enabled'], 404);
+        }
+
+        $token = \Illuminate\Support\Str::random(64);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => ['token' => $token, 'options' => $passkeys->discoverableOptions($token)],
+        ]);
+    }
+
+    public function passwordlessLogin(Request $request, Passkeys $passkeys): JsonResponse
+    {
+        if (!$this->passwordlessEnabled()) {
+            return response()->json(['status' => 'error', 'message' => 'Passkey sign-in is not enabled'], 404);
+        }
+
+        $request->validate([
+            'token' => 'required|string',
+            'credential' => 'required|array',
+        ]);
+
+        $user = $passkeys->verifyDiscoverable($request->token, $request->input('credential'));
+        if (!$user || !$user->active || $user->is_guest) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'passkey_login_failed',
+                'message' => 'This passkey could not be used to sign in',
+            ], 401);
+        }
+
+        // A passkey with user verification is already two factors (device + PIN/biometrics)
+        return $this->respondWithToken($user, 'passkey');
+    }
+
+    private function passwordlessEnabled(): bool
+    {
+        return app(\App\Services\SettingsService::class)->get('passkey_login_enabled') === true;
+    }
+
     private function challengeExpired(): JsonResponse
     {
         return response()->json([

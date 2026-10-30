@@ -177,6 +177,71 @@ class Passkeys
         return true;
     }
 
+    /**
+     * Options for a sign-in without username or password: the browser offers
+     * the passkeys it holds for this site. User verification is required.
+     */
+    public function discoverableOptions(string $token): array
+    {
+        $options = PublicKeyCredentialRequestOptions::create(
+            random_bytes(32),
+            $this->rpId(),
+            [],
+            PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
+            self::TIMEOUT_MS,
+        );
+
+        $json = $this->serialize($options);
+        Cache::put($this->discoverableKey($token), $json, self::OPTIONS_TTL);
+
+        return json_decode($json, true);
+    }
+
+    /**
+     * Verify a passwordless sign-in and return the passkey owner.
+     */
+    public function verifyDiscoverable(string $token, array $credential): ?User
+    {
+        $optionsJson = Cache::pull($this->discoverableKey($token));
+        if (!is_string($optionsJson)) {
+            return null;
+        }
+
+        try {
+            /** @var PublicKeyCredentialRequestOptions $options */
+            $options = $this->serializer()->deserialize($optionsJson, PublicKeyCredentialRequestOptions::class, 'json');
+            $publicKeyCredential = $this->parseCredential($credential);
+            $response = $publicKeyCredential->response;
+
+            // A discoverable credential must say which account it belongs to
+            if (!$response instanceof AuthenticatorAssertionResponse || $response->userHandle === null) {
+                return null;
+            }
+
+            $passkey = UserPasskey::where('credential_id', Base64UrlSafe::encodeUnpadded($publicKeyCredential->rawId))->first();
+            if (!$passkey || (string) $passkey->user_id !== $response->userHandle) {
+                return null;
+            }
+
+            $source = AuthenticatorAssertionResponseValidator::create($this->ceremonies()->requestCeremony())
+                ->check($this->loadSource($passkey), $response, $options, $this->rpId(), $response->userHandle);
+        } catch (\Throwable $e) {
+            report($e);
+            return null;
+        }
+
+        $passkey->credential_source = $this->serialize($source);
+        $passkey->last_used_at = now();
+        $passkey->save();
+
+        return $passkey->user;
+    }
+
+    private function discoverableKey(string $token): string
+    {
+        return 'passkey:passwordless:' . hash('sha256', $token);
+    }
+
     private function parseCredential(array $credential): PublicKeyCredential
     {
         return $this->serializer()->deserialize(json_encode($credential), PublicKeyCredential::class, 'json');

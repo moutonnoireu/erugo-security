@@ -26,6 +26,7 @@ function getSettings()
         ->orWhere('key', 'max_expiry_time')
         ->orWhere('key', 'default_expiry_time')
         ->orWhere('key', 'altcha_enabled')
+        ->orWhere('key', 'passkey_login_enabled')
         ->get();
 
     $settings = $settings->map(function ($setting) use ($settingsService) {

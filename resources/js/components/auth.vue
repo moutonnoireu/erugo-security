@@ -23,7 +23,9 @@ import {
   resendVerificationCode,
   verifyMfaCode,
   getMfaPasskeyOptions,
-  verifyMfaPasskey
+  verifyMfaPasskey,
+  getPasswordlessOptions,
+  passwordlessLogin
 } from '../api'
 import { passkeysSupported, getPasskeyAssertion } from '../webauthn'
 
@@ -54,6 +56,28 @@ const getAltchaPayload = async () => {
   return payload
 }
 const resetAltcha = () => altchaWidget.value?.reset()
+
+// Passwordless sign-in with a passkey (enabled by an administrator)
+const passkeyLoginEnabled = domData().passkey_login_enabled === true && passkeysSupported()
+const passkeyLoginBusy = ref(false)
+const attemptPasskeyLogin = async () => {
+  passkeyLoginBusy.value = true
+  try {
+    const { token, options } = await getPasswordlessOptions()
+    const credential = await getPasskeyAssertion(options)
+    await finishLogin(await passwordlessLogin(token, credential))
+  } catch (error) {
+    if (error?.name === 'NotAllowedError' || error?.name === 'AbortError') {
+      toast.error(t.value('auth.mfa.passkey_cancelled'))
+    } else if (error.code === 'ip_not_allowed') {
+      toast.error(t.value('auth.ip_not_allowed'))
+    } else {
+      toast.error(t.value('auth.passkey_login_failed'))
+    }
+  } finally {
+    passkeyLoginBusy.value = false
+  }
+}
 
 // Mandatory two-factor setup (admin policy)
 const enrolToken = ref('')
@@ -564,6 +588,14 @@ const switchToLogin = () => {
           </div>
           <div class="col-6 pe-0">
             <a href="" @click.prevent="forgotPasswordMode = true">{{ $t('auth.forgot_password') }}</a>
+          </div>
+        </div>
+        <div class="row mt-2 w-100" v-if="passkeyLoginEnabled">
+          <div class="col ps-0 pe-0">
+            <button class="block secondary" :disabled="passkeyLoginBusy" @click="attemptPasskeyLogin">
+              <Fingerprint />
+              {{ $t('auth.sign_in_with_passkey') }}
+            </button>
           </div>
         </div>
 
