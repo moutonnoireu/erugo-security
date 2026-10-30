@@ -76,7 +76,7 @@ jobs:
       - name: Boot the container
         run: |
           docker run -d --name erugo -p 8080:80 erugo-pr:ci
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if curl -fsS http://localhost:8080/api/health > /dev/null 2>&1; then
               curl -fsS http://localhost:8080/api/health; echo
               curl -fsS -o /dev/null -w "home page: %{http_code}\n" http://localhost:8080/
@@ -84,6 +84,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "::error::Erugo did not answer on /api/health"
-          docker logs erugo | tail -n 80
+          LOGS=$(docker logs erugo 2>&1 | tail -n 60 | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=Erugo did not answer on /api/health::$LOGS"
+          docker exec erugo sh -c 'tail -n 40 /var/log/supervisor/*.log 2>/dev/null; tail -n 40 /var/www/html/storage/logs/*.log 2>/dev/null' || true
           exit 1
