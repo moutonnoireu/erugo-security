@@ -61,7 +61,10 @@ jobs:
             composer update --lock --no-interaction --no-scripts
           fi
           composer validate --no-check-publish
-          composer audit --locked || true
+          # Report remaining advisories as annotations (visible in the run summary)
+          composer audit --locked --format=json > /tmp/audit.json || true
+          jq -r '.advisories // {} | to_entries[] | .key as $pkg | .value[] |
+            "::warning title=\($pkg) \(.cve // .advisoryId)::\(.title) (affected: \(.affectedVersions))"' /tmp/audit.json || true
 
       - name: Commit composer.lock
         run: |
