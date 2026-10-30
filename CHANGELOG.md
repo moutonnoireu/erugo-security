@@ -6,6 +6,15 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt weekly from scratch to pick up Alpine and PHP security updates.
 
+## [Unreleased]
+
+### Privacy and security
+- **No third-party requests**: the Outfit font and Bootstrap CSS are served by Erugo itself instead of
+  Google Fonts and cdnjs (Cloudflare), so visitors, including share recipients, no longer send their IP
+  address to those services. The unused Material Icons and Font Awesome stylesheets are removed.
+- **Stricter Content-Security-Policy**: no inline `<style>` elements and no external origins. Theme
+  colors are served as `/theme.css`, and the ALTCHA widget loads its stylesheet instead of injecting it.
+
 ## [0.2.15-sec.1] - 2026-10-30
 
 First release of the fork, based on Erugo 0.2.15.

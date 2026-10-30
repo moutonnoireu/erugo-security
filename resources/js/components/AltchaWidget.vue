@@ -16,7 +16,9 @@ let payload = null
 const ALTCHA_LANGUAGES = { de: 'de', fr: 'fr-fr', it: 'it', nl: 'nl', pt: 'pt-pt' }
 
 onMounted(async () => {
-  await import('altcha')
+  // "external" build + stylesheet: the default build injects a <style> element,
+  // which the Content-Security-Policy refuses
+  await Promise.all([import('altcha/external'), import('altcha/altcha.css')])
   await Promise.all([
     import('altcha/i18n/de'),
     import('altcha/i18n/fr-fr'),
