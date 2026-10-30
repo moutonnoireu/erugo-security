@@ -462,6 +462,10 @@ export const login = async (email, password, altcha = null) => {
   if (data.status === 'mfa_required') {
     return { mfaRequired: true, mfaToken: data.data.mfa_token, methods: data.data.methods }
   }
+  // Admin policy: a first factor must be set up before the session opens
+  if (data.status === 'mfa_enrolment_required') {
+    return { enrolmentRequired: true, enrolToken: data.data.enrol_token }
+  }
   return buildAuthSuccessData(data)
 }
 
@@ -504,6 +508,34 @@ export const verifyMfaPasskey = async (mfaToken, credential) => {
     body: JSON.stringify({ mfa_token: mfaToken, credential })
   })
   return buildAuthSuccessData(await jsonOrThrow(response))
+}
+
+// ----- mandatory two-factor setup at sign-in (admin policy) -----
+
+const enrolRequest = async (path, body) => {
+  const response = await fetch(`${apiUrl}/api/auth/mfa/enrol/${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { ...addJsonHeader() },
+    body: JSON.stringify(body)
+  })
+  return jsonOrThrow(response)
+}
+
+export const enrolStartTotp = async (enrolToken) => (await enrolRequest('totp/setup', { enrol_token: enrolToken })).data
+
+// Both return { auth, recoveryCodes }: the session opens once the first factor is set up
+export const enrolConfirmTotp = async (enrolToken, code) => {
+  const data = await enrolRequest('totp/confirm', { enrol_token: enrolToken, code })
+  return { auth: buildAuthSuccessData(data), recoveryCodes: data.data.recovery_codes }
+}
+
+export const enrolPasskeyOptions = async (enrolToken) =>
+  (await enrolRequest('passkey/options', { enrol_token: enrolToken })).data.options
+
+export const enrolPasskey = async (enrolToken, name, credential) => {
+  const data = await enrolRequest('passkey', { enrol_token: enrolToken, name, credential })
+  return { auth: buildAuthSuccessData(data), recoveryCodes: data.data.recovery_codes }
 }
 
 const authJson = async (path, method = 'GET', body = null) => {

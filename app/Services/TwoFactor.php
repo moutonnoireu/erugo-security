@@ -18,8 +18,63 @@ use ParagonIE\ConstantTime\Base32;
 class TwoFactor
 {
     public const CHALLENGE_TTL = 300;
+    public const ENROLMENT_TTL = 900;
+
+    /** Admin policy: who must use a second factor ("none", "admins", "everyone"). */
+    public const SETTING_REQUIRED_FOR = 'mfa_required_for';
+    public const POLICIES = ['none', 'admins', 'everyone'];
     public const MAX_ATTEMPTS = 5;
     public const RECOVERY_CODE_COUNT = 10;
+
+    public function __construct(private SettingsService $settings)
+    {
+    }
+
+    /** The admin policy requires a second factor for this user. */
+    public function isRequiredFor(User $user): bool
+    {
+        if ($user->is_guest) {
+            return false;
+        }
+
+        return match ($this->settings->get(self::SETTING_REQUIRED_FOR)) {
+            'everyone' => true,
+            'admins' => (bool) $user->admin,
+            default => false,
+        };
+    }
+
+    // ----- mandatory enrolment ---------------------------------------------
+
+    public function createEnrolmentChallenge(User $user): string
+    {
+        $token = Str::random(64);
+        Cache::put($this->enrolmentKey($token), $user->id, self::ENROLMENT_TTL);
+
+        return $token;
+    }
+
+    public function userForEnrolment(?string $token): ?User
+    {
+        if (!is_string($token) || $token === '') {
+            return null;
+        }
+
+        $id = Cache::get($this->enrolmentKey($token));
+        $user = $id ? User::find($id) : null;
+
+        return $user && $user->active ? $user : null;
+    }
+
+    public function completeEnrolment(string $token): void
+    {
+        Cache::forget($this->enrolmentKey($token));
+    }
+
+    private function enrolmentKey(string $token): string
+    {
+        return 'mfa:enrol:' . hash('sha256', $token);
+    }
 
     public function isEnabledFor(User $user): bool
     {

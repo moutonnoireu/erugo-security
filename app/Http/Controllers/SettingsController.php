@@ -12,6 +12,7 @@ use App\Utils\FileHelper;
 use App\Services\SettingsService;
 use App\Services\IpAllowlist;
 use App\Services\StorageEncryption;
+use App\Services\TwoFactor;
 
 class SettingsController extends Controller
 {
@@ -49,6 +50,15 @@ class SettingsController extends Controller
         $allowlistError = $this->validateIpAllowlist($request);
         if ($allowlistError !== null) {
             return $allowlistError;
+        }
+
+        $mfaPolicy = collect($request->settings)->firstWhere('key', TwoFactor::SETTING_REQUIRED_FOR);
+        if ($mfaPolicy && !in_array($mfaPolicy['value'] ?? null, TwoFactor::POLICIES, true)) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'invalid_mfa_policy',
+                'message' => 'Two-factor policy must be one of: ' . implode(', ', TwoFactor::POLICIES),
+            ], 422);
         }
 
         $enablesEncryption = collect($request->settings)

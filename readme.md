@@ -56,6 +56,8 @@ Opt-in per user, in *Settings → My Account → Two-factor authentication*:
 - **Passkeys** (WebAuthn): fingerprint, face, PIN, security key or phone, as a second step after the password. Passkeys are bound to the domain Erugo is served on and require HTTPS (or `localhost`).
 - **Recovery codes**: 10 single-use codes, shown once, stored hashed.
 
+**Policy** (*System settings → Security*): an admin can require two-factor authentication for **administrators** or **every user**. Users concerned who have none must set it up at their next password sign-in, before any session is opened, and their current password session is not renewed. They cannot remove their last factor while the policy applies.
+
 Turning a factor off needs the current password. Admins can reset a user who lost their device (*Users → Reset 2FA*), or from the command line: `docker compose exec app php artisan reset-2fa user@example.com`. Sign-in through an external provider (Google, Microsoft, Authentik, OIDC) relies on that provider's own MFA.
 
 ### Encryption of stored files
