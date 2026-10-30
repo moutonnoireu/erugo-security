@@ -94,6 +94,8 @@ Route::group([], function ($router) {
         Route::post('/favicon', [SettingsController::class, 'writeFavicon'])->name('settings.writeFavicon');
         Route::delete('/favicon', [SettingsController::class, 'deleteFavicon'])->name('settings.deleteFavicon');
         Route::get('/favicon/status', [SettingsController::class, 'hasFavicon'])->name('settings.hasFavicon');
+        //IP address of the current request, used by the IP allowlist settings
+        Route::get('/client-ip', [SettingsController::class, 'clientIp'])->name('settings.clientIp');
         //list background images
         Route::get('/backgrounds', [BackgroundsController::class, 'list'])->name('backgrounds.list');
         //upload a background image

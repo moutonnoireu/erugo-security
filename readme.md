@@ -27,6 +27,23 @@ services:
 
 Tags: `latest`, and the upstream version it is based on (e.g. `0.2.15`).
 
+## Optional security features
+
+All of these are **off by default** and configured by an administrator in *Settings → System settings → Security*.
+
+### Sign-in IP allowlist
+
+Only allow signing in from a list of IPv4/IPv6 addresses or CIDR ranges. Shared links and guest uploads (reverse shares) keep working from anywhere; signed-in members outside the list are refused.
+
+- Erugo refuses to enable the list if it does not contain the IP of the admin saving it.
+- Behind a reverse proxy, set `TRUSTED_PROXIES` so Erugo sees the real client address (comma-separated IPs/CIDRs of your proxies, or `*` if the container is only reachable through the proxy). Without it, every request appears to come from the proxy.
+- Locked out after an IP change: `docker compose exec app php artisan disable-ip-allowlist`
+
+```yaml
+    environment:
+      TRUSTED_PROXIES: "172.16.0.0/12"   # e.g. your Docker network / proxy address
+```
+
 ## Migrate from `wardy784/erugo`
 
 1. Back up your `storage` folder (and your database if it is external).

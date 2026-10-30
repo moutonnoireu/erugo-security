@@ -77,7 +77,8 @@
     "verification_failed": "Échec de la vérification",
     "verify_email": "Vérifier l'e-mail",
     "verifying": "Vérification...",
-    "welcome": "Bienvenue"
+    "welcome": "Bienvenue",
+    "ip_not_allowed": "La connexion n'est pas autorisée depuis votre réseau."
   },
   "button": {
     "reverse_share_invite": "Créer une demande de partage inversé",
@@ -852,7 +853,20 @@
       "smtp_username": "Nom d'utilisateur SMTP",
       "smtp_username_description": "Le nom d'utilisateur requis pour s'authentifier auprès de votre serveur SMTP. Il s'agit généralement de l'adresse mail ou du nom de compte associé à votre service de messagerie.",
       "upload_modes": "Modes de téléchargement",
-      "your_auth_providers": "Vos fournisseurs d'authentification"
+      "your_auth_providers": "Vos fournisseurs d'authentification",
+      "security": {
+        "title": "Sécurité",
+        "ip_allowlist": "Adresses IP autorisées à la connexion",
+        "ip_allowlist_description": "N'autoriser la connexion que depuis ces adresses ou plages IP. Les liens de partage et les dépôts des invités (partages inversés) restent accessibles de partout. Les utilisateurs connectés hors de la liste sont déconnectés.",
+        "ip_allowlist_enabled": "Restreindre la connexion aux adresses ci-dessous",
+        "ip_allowlist_entries": "Adresses autorisées",
+        "ip_allowlist_entries_help": "Une adresse IPv4/IPv6 ou une plage CIDR par ligne (ex. 198.51.100.0/24). Le texte après # est ignoré.",
+        "your_ip": "Votre adresse IP actuelle : {ip}.",
+        "add_your_ip": "L'ajouter à la liste",
+        "ip_allowlist_proxy_help": "Derrière un reverse proxy, définissez la variable d'environnement TRUSTED_PROXIES pour qu'Erugo voie la vraie adresse du client. Bloqué ? Lancez : php artisan disable-ip-allowlist",
+        "lockout_error": "Votre adresse IP actuelle ({ip}) n'est pas dans la liste. Ajoutez-la avant d'activer la restriction.",
+        "invalid_entries": "Adresse ou plage IP invalide : {entries}"
+      }
     },
     "system_auth_provider_info_link": "À propos",
     "table": {

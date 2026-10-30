@@ -37,6 +37,7 @@ const commands = computed(() => {
     { id: 'system.emails', label: t.value('settings.system.emails'), keywords: 'emails notifications download expiry warning', path: 'system.emails', icon: Send, category: 'system', adminOnly: true },
     { id: 'system.smtp', label: t.value('settings.system.smtp'), keywords: 'smtp mail server host port encryption', path: 'system.smtp', icon: AtSign, category: 'system', adminOnly: true },
     { id: 'system.auth', label: t.value('settings.system.auth'), keywords: 'auth authentication providers login sso oauth', path: 'system.auth', icon: Fingerprint, category: 'system', adminOnly: true },
+    { id: 'system.security', label: t.value('settings.system.security.title'), keywords: 'security ip allowlist whitelist restrict login network', path: 'system.security', icon: Settings, category: 'system', adminOnly: true },
     { id: 'system.backups', label: t.value('settings.system.backups.title'), keywords: 'backups database backup restore', path: 'system.backups', icon: Database, category: 'system', adminOnly: true },
     
     // System sub-sections

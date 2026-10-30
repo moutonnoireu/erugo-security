@@ -110,6 +110,8 @@ observer.observe(document.body, { childList: true, subtree: true })
 
 const tolgee = Tolgee().use(DevTools()).use(FormatIcu()).init({
   language: localStorage.getItem('language') || domData().default_language || 'en',
+  // Untranslated keys fall back to English instead of showing the raw key
+  fallbackLanguage: 'en',
 
   // for development
   apiUrl:  import.meta.env.VITE_APP_TOLGEE_API_URL,

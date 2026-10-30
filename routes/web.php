@@ -10,6 +10,8 @@ use App\Models\Theme;
 use App\Http\Controllers\ExternalAuthController;
 use App\Services\SettingsService;
 
+// Guarded: route files are loaded once per application boot (tests boot several times)
+if (!function_exists('getSettings')) {
 function getSettings()
 {
     
@@ -49,6 +51,7 @@ function getSettings()
     $indexedSettings['version'] = config('app.version');
 
     return $indexedSettings;
+}
 }
 
 Route::get('/', function () {

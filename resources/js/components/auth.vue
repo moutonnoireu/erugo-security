@@ -134,7 +134,11 @@ const attemptLogin = async () => {
       }
     }
   } catch (error) {
-    toast.error(t.value('auth.invalid_email_or_password'))
+    if (error.code === 'ip_not_allowed') {
+      toast.error(t.value('auth.ip_not_allowed'))
+    } else {
+      toast.error(t.value('auth.invalid_email_or_password'))
+    }
   }
 }
 

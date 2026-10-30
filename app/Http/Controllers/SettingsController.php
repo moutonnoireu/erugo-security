@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use App\Utils\FileHelper;
 use App\Services\SettingsService;
+use App\Services\IpAllowlist;
+
 class SettingsController extends Controller
 {
     /**
@@ -20,7 +22,7 @@ class SettingsController extends Controller
      * configuration that authenticated non-admin users legitimately need to
      * read (e.g. share limits, self-registration flags).
      */
-    private const ADMIN_ONLY_GROUPS = ['system.smtp'];
+    private const ADMIN_ONLY_GROUPS = ['system.smtp', 'system.security'];
 
     /**
      * Return true when the given group string falls under an admin-only prefix.
@@ -42,6 +44,11 @@ class SettingsController extends Controller
             'settings.*.key' => 'required|string|max:255',
             'settings.*.value' => 'string|nullable|max:65535',
         ]);
+
+        $allowlistError = $this->validateIpAllowlist($request);
+        if ($allowlistError !== null) {
+            return $allowlistError;
+        }
 
         $errors = [];
         $savedSettings = [];
@@ -85,6 +92,57 @@ class SettingsController extends Controller
             'data' => [
                 'settings' => $savedSettings,
             ]
+        ]);
+    }
+
+    /**
+     * Reject invalid allowlist entries, and refuse to enable the allowlist
+     * when it would lock out the administrator making the change.
+     */
+    private function validateIpAllowlist(Request $request): ?\Illuminate\Http\JsonResponse
+    {
+        $incoming = collect($request->settings)->pluck('value', 'key');
+
+        if (!$incoming->has(IpAllowlist::SETTING_ENABLED) && !$incoming->has(IpAllowlist::SETTING_LIST)) {
+            return null;
+        }
+
+        $current = Setting::whereIn('key', [IpAllowlist::SETTING_ENABLED, IpAllowlist::SETTING_LIST])
+            ->pluck('value', 'key');
+
+        $enabled = ($incoming[IpAllowlist::SETTING_ENABLED] ?? $current[IpAllowlist::SETTING_ENABLED] ?? 'false') === 'true';
+        $entries = IpAllowlist::parse((string) ($incoming[IpAllowlist::SETTING_LIST] ?? $current[IpAllowlist::SETTING_LIST] ?? ''));
+
+        $invalid = IpAllowlist::invalidEntries($entries);
+        if ($invalid !== []) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'ip_allowlist_invalid',
+                'message' => 'Invalid IP address or range: ' . implode(', ', $invalid),
+                'data' => ['invalid' => $invalid],
+            ], 422);
+        }
+
+        if ($enabled && !IpAllowlist::matches($request->ip(), $entries)) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 'ip_allowlist_lockout',
+                'message' => 'Your current IP address (' . $request->ip() . ') is not in the allowlist. Add it before enabling the restriction.',
+                'data' => ['ip' => $request->ip()],
+            ], 422);
+        }
+
+        return null;
+    }
+
+    /**
+     * IP address of the current request, as seen by Erugo (after trusted proxies).
+     */
+    public function clientIp(Request $request)
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => ['ip' => $request->ip()],
         ]);
     }
 
@@ -139,6 +197,14 @@ class SettingsController extends Controller
         }
 
         $settings = $query->get();
+
+        // A wildcard such as "system.*" also matches admin-only sub-groups
+        // (system.smtp, system.security): never return those to non-admins.
+        if (!Auth::user()?->admin) {
+            $settings = $settings
+                ->reject(fn ($setting) => $this->groupRequiresAdmin((string) $setting->group))
+                ->values();
+        }
 
         return response()->json([
             'status' => 'success',

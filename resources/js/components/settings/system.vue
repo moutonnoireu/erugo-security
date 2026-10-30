@@ -17,7 +17,8 @@ import {
   ExternalLink,
   Database,
   Download,
-  Loader2
+  Loader2,
+  Shield
 } from 'lucide-vue-next'
 import {
   getSettingsByGroup,
@@ -30,7 +31,8 @@ import {
   getBackups,
   createBackup,
   downloadBackup,
-  deleteBackup
+  deleteBackup,
+  getClientIp
 } from '../../api'
 import HelpTip from '../helpTip.vue'
 
@@ -72,8 +74,25 @@ const settings = ref({
   smtp_sender_address: '',
   self_registration_enabled: false,
   self_registration_allow_any_domain: true,
-  self_registration_allowed_domains: ''
+  self_registration_allowed_domains: '',
+  login_ip_allowlist_enabled: false,
+  login_ip_allowlist: ''
 })
+
+// IP address of this browser as seen by the server (for the sign-in allowlist)
+const clientIp = ref('')
+const loadClientIp = async () => {
+  try {
+    clientIp.value = await getClientIp()
+  } catch (error) {
+    clientIp.value = ''
+  }
+}
+const addClientIpToAllowlist = () => {
+  if (!clientIp.value) return
+  const current = (settings.value.login_ip_allowlist || '').trim()
+  settings.value.login_ip_allowlist = current ? `${current}\n${clientIp.value}` : clientIp.value
+}
 
 // Pattern presets for share URL generation
 const patternPresets = [
@@ -245,6 +264,7 @@ const emit = defineEmits(['navItemClicked'])
 
 onMounted(async () => {
   await loadSettings()
+  loadClientIp()
   await loadAuthProviders()
   await loadBackups()
   onLocalhost.value = window.location.hostname === 'localhost'
@@ -396,7 +416,13 @@ const saveSettings = async () => {
     notifySettingsChanged()
   } catch (error) {
     saving.value = false
-    toast.error(t.value('settings.failedToSaveSettings'))
+    if (error.code === 'ip_allowlist_lockout') {
+      toast.error(t.value('settings.system.security.lockout_error', { ip: error.data?.ip ?? '' }))
+    } else if (error.code === 'ip_allowlist_invalid') {
+      toast.error(t.value('settings.system.security.invalid_entries', { entries: (error.data?.invalid ?? []).join(', ') }))
+    } else {
+      toast.error(t.value('settings.failedToSaveSettings'))
+    }
     console.error(error)
   }
 }
@@ -526,6 +552,12 @@ const handleDeleteAuthProvider = async (id) => {
             <a href="#" @click.prevent="handleNavItemClicked('auth')">
               <Fingerprint />
               {{ $t('settings.system.auth') }}
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="handleNavItemClicked('security')">
+              <Shield />
+              {{ $t('settings.system.security.title') }}
             </a>
           </li>
           <li>
@@ -1175,6 +1207,51 @@ const handleDeleteAuthProvider = async (id) => {
 
         <div class="row mb-5">
           <div class="col-12 col-md-6 pe-0 ps-0 ps-md-3">
+            <div class="setting-group" id="security">
+              <div class="setting-group-header">
+                <h3>
+                  <Shield />
+                  {{ $t('settings.system.security.title') }}
+                </h3>
+              </div>
+
+              <div class="setting-group-body">
+                <h5 id="login_ip_allowlist_section" class="mb-3">{{ $t('settings.system.security.ip_allowlist') }}</h5>
+                <p class="help-text">{{ $t('settings.system.security.ip_allowlist_description') }}</p>
+
+                <div class="setting-group-body-item">
+                  <div class="checkbox-container">
+                    <input
+                      type="checkbox"
+                      id="login_ip_allowlist_enabled"
+                      v-model="settings.login_ip_allowlist_enabled"
+                    />
+                    <label for="login_ip_allowlist_enabled">
+                      {{ $t('settings.system.security.ip_allowlist_enabled') }}
+                    </label>
+                  </div>
+                </div>
+
+                <div class="setting-group-body-item">
+                  <label for="login_ip_allowlist">{{ $t('settings.system.security.ip_allowlist_entries') }}</label>
+                  <textarea
+                    id="login_ip_allowlist"
+                    rows="5"
+                    v-model="settings.login_ip_allowlist"
+                    :placeholder="'203.0.113.10\n198.51.100.0/24\n2001:db8::/32'"
+                    spellcheck="false"
+                  ></textarea>
+                  <p class="help-text">{{ $t('settings.system.security.ip_allowlist_entries_help') }}</p>
+                  <p class="help-text" v-if="clientIp">
+                    {{ $t('settings.system.security.your_ip', { ip: clientIp }) }}
+                    <a href="#" @click.prevent="addClientIpToAllowlist">{{ $t('settings.system.security.add_your_ip') }}</a>
+                  </p>
+                </div>
+
+                <p class="help-text">{{ $t('settings.system.security.ip_allowlist_proxy_help') }}</p>
+              </div>
+            </div>
+
             <div class="setting-group" id="backups">
               <div class="setting-group-header">
                 <h3>
