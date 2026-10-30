@@ -8,6 +8,11 @@ on:
     branches: ["deps/**"]
     paths: [composer.json, .github/workflows/composer-lock.yml]
   workflow_dispatch:
+    inputs:
+      packages:
+        description: "Packages to update (space separated), e.g. a transitive dependency"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -40,6 +45,7 @@ jobs:
               | (($a[0][$s] // {}) | keys) + (($b[0][$s] // {}) | keys) | .[] as $k
               | select(($a[0][$s] // {})[$k] != ($b[0][$s] // {})[$k]) | $k ]
             | unique | map(select(. != "php" and (startswith("ext-") | not))) | join(" ")')
+          if [ -n "${{ inputs.packages }}" ]; then PKGS="$PKGS ${{ inputs.packages }}"; fi
           echo "Changed: ${PKGS:-none}"
           echo "pkgs=$PKGS" >> "$GITHUB_OUTPUT"
 
