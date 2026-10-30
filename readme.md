@@ -8,7 +8,7 @@
 ## Why this fork
 
 - **Security fixes included**: 20+ community fixes (auth, path traversal, XSS, mass assignment…), see [SECURITY-PATCHES.md](SECURITY-PATCHES.md).
-- **Maintained base image**: upstream builds on `alpine:3.19`, which is end of life. This fork uses `alpine:3.24`.
+- **Maintained base image**: upstream builds on `alpine:3.19` and PHP 8.3; this fork uses `alpine:3.24` and **PHP 8.5**, with production dependencies only (no dev tooling in the image) and checksum-verified downloads.
 - **Scanned and rebuilt weekly**: every image is scanned with Trivy and rebuilt from scratch each Monday, so PHP and Alpine fixes land without waiting for a commit.
 - **Drop-in compatible**: same `storage` volume, same database. Tracked upstream release: [`.upstream-version`](.upstream-version).
 
