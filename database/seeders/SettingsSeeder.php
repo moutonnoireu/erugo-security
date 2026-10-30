@@ -444,6 +444,22 @@ class SettingsSeeder extends Seeder
                 'group' => 'system.emails.subjects',
                 'created_at' => now(),
                 'updated_at' => now()
+            ],
+            [
+                'key' => 'login_ip_allowlist_enabled',
+                'value' => 'false',
+                'previous_value' => null,
+                'group' => 'system.security',
+                'created_at' => now(),
+                'updated_at' => now()
+            ],
+            [
+                'key' => 'login_ip_allowlist',
+                'value' => '',
+                'previous_value' => null,
+                'group' => 'system.security',
+                'created_at' => now(),
+                'updated_at' => now()
             ]
 
         ]);

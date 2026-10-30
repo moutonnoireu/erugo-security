@@ -22,6 +22,11 @@ Commit hashes refer to the `php-fix` branch.
 | `3a52370` | Guard admin-only settings tabs against stale URL hash navigation | kali2 |
 | `58765d8` | Single-file download on password-protected shares (reworked from upstream #188) | moutonnoireu |
 
+### Fork-specific fixes
+| Fix | Details |
+|---|---|
+| SMTP credentials readable by any signed-in user | `GET /api/settings/group/system.*` matched the admin-only `system.smtp` group (SMTP password included). Admin-only groups are now filtered out of wildcard reads for non-admins. |
+
 ### Path traversal & file handling
 | Commit | Fix | Author |
 |---|---|---|

@@ -77,7 +77,8 @@
     "verification_failed": "Verification failed",
     "verify_email": "Verify Email",
     "verifying": "Verifying...",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "ip_not_allowed": "Sign-in is not allowed from your network."
   },
   "button": {
     "reverse_share_invite": "Create a reverse share request",
@@ -873,7 +874,20 @@
       "smtp_username": "SMTP Username",
       "smtp_username_description": "The username required to authenticate with your SMTP server. This is typically the email address or account name associated with your email service.",
       "upload_modes": "Upload modes",
-      "your_auth_providers": "Your Auth Providers"
+      "your_auth_providers": "Your Auth Providers",
+      "security": {
+        "title": "Security",
+        "ip_allowlist": "Sign-in IP allowlist",
+        "ip_allowlist_description": "Only allow signing in from these IP addresses or ranges. Shared links and guest uploads (reverse shares) keep working from anywhere. Signed-in users outside the list are signed out.",
+        "ip_allowlist_enabled": "Restrict sign-in to the addresses below",
+        "ip_allowlist_entries": "Allowed addresses",
+        "ip_allowlist_entries_help": "One IPv4/IPv6 address or CIDR range per line (e.g. 198.51.100.0/24). Text after # is ignored.",
+        "your_ip": "Your current IP address: {ip}.",
+        "add_your_ip": "Add it to the list",
+        "ip_allowlist_proxy_help": "Behind a reverse proxy, set the TRUSTED_PROXIES environment variable so Erugo sees the real client address. Locked out? Run: php artisan disable-ip-allowlist",
+        "lockout_error": "Your current IP address ({ip}) is not in the allowlist. Add it before enabling the restriction.",
+        "invalid_entries": "Invalid IP address or range: {entries}"
+      }
     },
     "system_auth_provider_info_link": "About {name}",
     "table": {

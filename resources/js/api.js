@@ -445,7 +445,9 @@ export const login = async (email, password) => {
   })
   const data = await response.json()
   if (!response.ok) {
-    throw new Error(data.message)
+    const error = new Error(data.message)
+    error.code = data.code
+    throw error
   }
   return buildAuthSuccessData(data)
 }
@@ -689,9 +691,26 @@ export const saveSettingsById = async (settings) => {
   })
   const data = await response.json()
   if (!response.ok) {
-    throw new Error(data.message)
+    const error = new Error(data.message)
+    error.code = data.code
+    error.data = data.data
+    throw error
   }
   return data.data
+}
+
+export const getClientIp = async () => {
+  const response = await fetchWithAuth(`${apiUrl}/api/settings/client-ip`, {
+    method: 'GET',
+    headers: {
+      ...addJsonHeader()
+    }
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.message)
+  }
+  return data.data.ip
 }
 
 export const saveLogo = async (logoFile) => {

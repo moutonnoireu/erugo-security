@@ -15,6 +15,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: [
             'refresh_token',
         ]);
+
+        // Behind a reverse proxy, set TRUSTED_PROXIES (comma separated IPs/CIDRs,
+        // or "*") so the client IP is read from X-Forwarded-For. Nothing is
+        // trusted by default, which keeps the client IP from being spoofed.
+        $trustedProxies = trim((string) env('TRUSTED_PROXIES', ''));
+        if ($trustedProxies !== '') {
+            $middleware->trustProxies(
+                at: $trustedProxies === '*' ? '*' : array_map('trim', explode(',', $trustedProxies))
+            );
+        }
+
+        $middleware->appendToGroup('api', \App\Http\Middleware\RestrictSignInToAllowedIps::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\RestrictSignInToAllowedIps::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

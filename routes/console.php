@@ -57,3 +57,11 @@ Artisan::command('clear-settings-cache', function () {
     app(SettingsService::class)->clearCache();
     $this->info('Settings cache cleared.');
 })->purpose('Clear the settings cache');
+
+// Recovery: turn the sign-in IP allowlist off (e.g. after an IP change locked admins out).
+// docker compose exec app php artisan disable-ip-allowlist
+Artisan::command('disable-ip-allowlist', function () {
+    \App\Models\Setting::where('key', \App\Services\IpAllowlist::SETTING_ENABLED)->update(['value' => 'false']);
+    app(SettingsService::class)->clearCache();
+    $this->info('Sign-in IP allowlist disabled.');
+})->purpose('Disable the sign-in IP allowlist');
