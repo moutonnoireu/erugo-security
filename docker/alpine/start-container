@@ -35,6 +35,9 @@ if [ "$(id -u)" = "0" ]; then
     echo "Setting storage permissions..."
     # only touch what is not already owned by erugo (fast on large volumes)
     find /var/www/html/storage \( ! -user erugo -o ! -group erugo \) -exec chown -h erugo:erugo {} +
+    # the container runtime gives stdout/stderr to root: hand them to erugo so
+    # supervisord can still send every program's output to `docker logs`
+    chown erugo:erugo /proc/self/fd/1 /proc/self/fd/2 2>/dev/null || true
     export ERUGO_BANNER_SHOWN=1
     exec su-exec erugo:erugo "$0" "$@"
 fi
