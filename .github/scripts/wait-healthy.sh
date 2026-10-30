@@ -14,6 +14,6 @@ for i in $(seq 1 90); do
   sleep 2
 done
 docker logs "$name" 2>&1 | tail -n 80
-LOGS=$(docker logs "$name" 2>&1 | tail -n 60 | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
+LOGS=$(docker logs "$name" 2>&1 | tail -n 25 | sed -e 's/%/%25/g' | sed -e ':a;N;$!ba;s/\n/%0A/g')
 echo "::error title=$name did not answer on /api/health::$LOGS"
 exit 1

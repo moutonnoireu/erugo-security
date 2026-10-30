@@ -8,7 +8,8 @@
 ## Why this fork
 
 - **Security fixes included**: 20+ community fixes (auth, path traversal, XSS, mass assignment…), see [SECURITY-PATCHES.md](SECURITY-PATCHES.md).
-- **Maintained base image**: upstream builds on `alpine:3.19` and PHP 8.3; this fork uses `alpine:3.24` and **PHP 8.5**, with production dependencies only (no dev tooling in the image) and checksum-verified downloads.
+- **Maintained base image**: upstream builds on `alpine:3.19` and PHP 8.3; this fork uses [FrankenPHP](https://frankenphp.dev) on Alpine with **PHP 8.5**, production dependencies only (no dev tooling in the image) and checksum-verified downloads.
+- **Unprivileged container**: every process runs as an unprivileged user, the application code is read-only for it, and the container can run with a read-only root filesystem and no capabilities (see [Hardened deployment](#hardened-deployment)). Strict security headers (Content-Security-Policy, `Referrer-Policy: no-referrer`…) are sent by default.
 - **Scanned and rebuilt weekly**: every image is scanned with Trivy and rebuilt from scratch each Monday, so PHP and Alpine fixes land without waiting for a commit.
 - **Drop-in compatible**: same `storage` volume, same database. Tracked upstream release: [`.upstream-version`](.upstream-version).
 
@@ -24,6 +25,34 @@ services:
     ports:
       - "9998:80"
 ```
+
+### Hardened deployment
+
+The example above keeps working as is. To go further, run the container without root, with a read-only root filesystem and without Linux capabilities:
+
+```yaml
+services:
+  app:
+    image: ghcr.io/moutonnoireu/erugo-security:latest
+    restart: unless-stopped
+    user: "1000:1000"            # the storage folder must belong to 1000:1000
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      ERUGO_PORT: "8080"         # port inside the container
+    volumes:
+      - ./erugo-storage:/var/www/html/storage
+    ports:
+      - "9998:8080"
+```
+
+- Started as root (default), the container only fixes the ownership of `storage`, then drops to the `erugo` user (uid 1000) before starting anything. Starting it once without `user:` is the easiest way to fix the ownership of an existing folder (or `chown -R 1000:1000 ./erugo-storage`).
+- `ERUGO_PORT` defaults to `80`, which unprivileged processes can bind under Docker and Podman. On Kubernetes or Docker older than 20.10, set it to `8080`.
+- TLS is not handled in the container: put it behind your reverse proxy, which should send `X-Forwarded-*` headers (see `TRUSTED_PROXIES` below).
 
 Tags: `latest` (latest release), `0.2.15-sec.1` (a fixed release), `0.2.15` (latest release for that upstream version), `edge` (development branch, not a release). Releases and their notes: [CHANGELOG.md](CHANGELOG.md). Release images are rebuilt every week to pick up Alpine and PHP security updates.
 

@@ -6,6 +6,31 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt weekly from scratch to pick up Alpine and PHP security updates.
 
+## [Unreleased]
+
+### Image
+- **FrankenPHP** (official `dunglas/frankenphp` image, PHP 8.5) replaces Caddy + php-fpm: one server
+  process, PHP updates as soon as the official PHP images publish them.
+- **Unprivileged processes**: the server, tusd, the queue worker and the scheduler run as `erugo`
+  (uid 1000). Root is only used at start to fix the ownership of `storage`, and is not needed at all
+  with `user: "1000:1000"`. The application code is owned by root and read-only for `erugo`.
+- The container can run with `read_only: true` (plus a `/tmp` tmpfs), `cap_drop: [ALL]` and
+  `no-new-privileges`. New `ERUGO_PORT` variable (default `80`). See *Hardened deployment* in the README.
+- The scheduler runs `schedule:work` instead of a root cron daemon; `sudo` and `cronie` removed.
+- Docker `HEALTHCHECK` on `/api/health`.
+
+### Security
+- Security headers: Content-Security-Policy, `Referrer-Policy: no-referrer` (share links never leak
+  to other sites), Permissions-Policy, Cross-Origin-Opener-Policy; `Server`/`X-Powered-By` removed.
+  HSTS no longer sets `includeSubDomains; preload`, which forced HTTPS on every host of the domain.
+- The tusd hook endpoint accepted requests from any private address, i.e. from any visitor when Erugo
+  runs behind a reverse proxy. It is now only served on an internal loopback listener and only accepts
+  loopback connections.
+
+### Upgrading
+Nothing to change: same volume, same port (`80`). Files in `storage` not owned by uid 1000 are
+fixed at start. If you set `user:` yourself, use `1000:1000`.
+
 ## [0.2.15-sec.1] - 2026-10-30
 
 First release of the fork, based on Erugo 0.2.15.
