@@ -73,3 +73,17 @@ jobs:
           for ext in pdo_sqlite pdo_mysql pdo_pgsql gd intl zip mbstring curl openssl sodium; do
             echo "$MODULES" | grep -qix "$ext" || { echo "::error::Missing PHP extension: $ext"; exit 1; }
           done
+      - name: Boot the container
+        run: |
+          docker run -d --name erugo -p 8080:80 erugo-pr:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/api/health > /dev/null 2>&1; then
+              curl -fsS http://localhost:8080/api/health; echo
+              curl -fsS -o /dev/null -w "home page: %{http_code}\n" http://localhost:8080/
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Erugo did not answer on /api/health"
+          docker logs erugo | tail -n 80
+          exit 1
