@@ -91,7 +91,7 @@ jobs:
           docker run -d --name erugo-default -p 8081:80 -v erugo-storage:/var/www/html/storage erugo-pr:ci
           ./.github/scripts/wait-healthy.sh erugo-default http://localhost:8081
           # root is only used to fix the volume ownership: every process runs as erugo (uid 1000)
-          PROCS=$(docker top erugo-default -eo uid,args 2>&1) || { echo "::error::docker top failed: $PROCS"; exit 1; }
+          PROCS=$(docker top erugo-default -eo uid,pid,args 2>&1) || { echo "::error::docker top failed: $PROCS"; exit 1; }
           echo "$PROCS"
           OTHERS=$(echo "$PROCS" | tail -n +2 | awk '$1 != "1000"')
           if [ -n "$OTHERS" ]; then
