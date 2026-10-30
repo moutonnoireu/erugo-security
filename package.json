@@ -15,11 +15,12 @@
   "dependencies": {
     "@codemirror/lang-html": "^6.4.9",
     "@codemirror/theme-one-dark": "^6.1.2",
+    "@fontsource-variable/outfit": "5.3.0",
     "@tolgee/format-icu": "^6.2.2",
     "@tolgee/vue": "^6.2.2",
     "@vitejs/plugin-vue": "^5.2.1",
     "altcha": "3.2.4",
-    "bootstrap": "^5.3.3",
+    "bootstrap": "5.0.2",
     "codemirror": "^6.0.1",
     "dompurify": "^3.2.6",
     "flag-icons": "^7.3.2",

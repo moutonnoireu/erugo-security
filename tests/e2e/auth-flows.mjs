@@ -3,7 +3,8 @@
 //   -> sign-in with passkey as second factor -> with a recovery code
 //   -> with an authenticator code -> passwordless sign-in with the passkey
 //   -> upload a file (tus) -> download it back, in full and by range.
-// Also checks the security headers and fails on any Content-Security-Policy violation.
+// Also checks the security headers and fails on any Content-Security-Policy violation
+// or any request to another origin (fonts and CSS are served by Erugo itself).
 //
 // Usage: BASE_URL=http://localhost:8080 EMAIL=... PASSWORD=... node tests/e2e/auth-flows.mjs
 // The account must exist, have no second factor, and passkey sign-in must be
@@ -45,6 +46,11 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 950 
 const page = await context.newPage()
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
+const BASE_ORIGIN = new URL(BASE).origin
+page.on('request', (r) => {
+  const u = new URL(r.url())
+  if (/^https?:$/.test(u.protocol) && u.origin !== BASE_ORIGIN) errors.push('third-party request: ' + r.url())
+})
 page.on('console', (m) => {
   if (m.type() === 'error' && /Content Security Policy|Refused to/i.test(m.text())) errors.push('CSP: ' + m.text())
 })

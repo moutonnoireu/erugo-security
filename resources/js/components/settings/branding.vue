@@ -257,21 +257,14 @@ const sanitizeCssColor = (value) => {
   return '#000000'
 }
 
+// CSS custom properties set through the CSSOM: no <style> element, which
+// the Content-Security-Policy does not allow
 const applyCssVariables = (colors) => {
-  const css = `
-      :root {
-        --primary-color: ${sanitizeCssColor(colors.primary)};
-        --secondary-color: ${sanitizeCssColor(colors.secondary)};
-        --accent-color: ${sanitizeCssColor(colors.accent)};
-        --accent-color-light: ${sanitizeCssColor(colors.accentLight)};
-      }`
-  let styleTag = document.getElementById('erugo-css-variables')
-  if (!styleTag) {
-    styleTag = document.createElement('style')
-    styleTag.id = 'erugo-css-variables'
-    document.head.appendChild(styleTag)
-  }
-  styleTag.textContent = css
+  const root = document.documentElement.style
+  root.setProperty('--primary-color', sanitizeCssColor(colors.primary))
+  root.setProperty('--secondary-color', sanitizeCssColor(colors.secondary))
+  root.setProperty('--accent-color', sanitizeCssColor(colors.accent))
+  root.setProperty('--accent-color-light', sanitizeCssColor(colors.accentLight))
 }
 
 const applySettingsWithoutRefresh = () => {

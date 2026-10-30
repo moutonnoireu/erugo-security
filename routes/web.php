@@ -56,6 +56,28 @@ function getSettings()
 }
 }
 
+// Theme and status page colors as stylesheets rather than inline <style>
+// blocks, so the Content-Security-Policy can forbid inline styles.
+Route::get('/theme.css', function () {
+    $theme = Theme::where('active', true)->first();
+
+    return response()->view('css.theme', ['theme' => $theme])
+        ->header('Content-Type', 'text/css; charset=UTF-8')
+        ->header('Cache-Control', 'no-cache');
+});
+
+Route::get('/status.css', function () {
+    $settingsService = new SettingsService();
+    $settings = [];
+    foreach (['css_primary_color', 'css_secondary_color', 'css_accent_color', 'css_accent_color_light'] as $key) {
+        $settings[$key] = $settingsService->get($key);
+    }
+
+    return response()->view('css.status', ['settings' => $settings])
+        ->header('Content-Type', 'text/css; charset=UTF-8')
+        ->header('Cache-Control', 'no-cache');
+});
+
 Route::get('/', function () {
     $indexedSettings = getSettings();
 
