@@ -22,10 +22,13 @@ jobs:
     permissions:
       contents: read
       packages: write
+      # keyless signing with cosign (Sigstore): the workflow's OIDC identity
+      id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       # What to build and how to tag it:
       #   push to php-fix          -> :edge, :sha-<commit>
@@ -63,15 +66,15 @@ jobs:
             echo "$TAGS" | sed 's/^ *//'
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build (amd64) for scan
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/alpine/Dockerfile
@@ -111,7 +114,8 @@ jobs:
           echo "Fixable CRITICAL vulnerabilities: $COUNT"
           [ "$COUNT" -eq 0 ]
       - name: Publish multi-arch
-        uses: docker/build-push-action@v6
+        id: publish
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           file: docker/alpine/Dockerfile
@@ -122,7 +126,27 @@ jobs:
           build-args: VERSION=${{ steps.ver.outputs.v }}
           cache-from: type=gha
           tags: ${{ steps.ver.outputs.tags }}
+          # SBOM (SPDX) and SLSA provenance attached to the image as attestations
+          sbom: true
+          provenance: mode=max
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.ver.outputs.v }}
             org.opencontainers.image.revision=${{ github.sha }}
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - name: Sign the image (keyless)
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          # signs the multi-arch index and each platform image; the signature,
+          # its certificate and a transparency log entry are public (Rekor)
+          cosign sign --yes --recursive "${IMAGE}@${DIGEST}"
+      - name: Verify the signature
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          cosign verify "${IMAGE}@${DIGEST}" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/docker\.yml@" \
+            > /dev/null
+          echo "Signed: ${IMAGE}@${DIGEST}" >> "$GITHUB_STEP_SUMMARY"
