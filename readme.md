@@ -95,6 +95,10 @@ To roll back, switch the image back and restart.
 
 Please do not open a public issue. Use [Report a vulnerability](https://github.com/moutonnoireu/erugo-security/security/advisories/new) instead.
 
+## AI disclosure
+
+An AI assistant (Anthropic's Claude) was used on this fork to **harden the image** (base image, CI, dependency updates, security fixes) and to **propose and implement new features** (IP allowlist, ALTCHA, two-factor authentication, encryption at rest). Every change goes through a pull request, the test suite and the Trivy scan, and is reviewed and merged by the maintainer. Commits written with AI assistance carry a `Co-Authored-By: Claude` trailer.
+
 ---
 
 *The original Erugo README follows.*
