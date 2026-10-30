@@ -37,6 +37,7 @@ const results = []
 const check = (name, ok) => {
   results.push({ name, ok })
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}`)
+  if (!ok && process.env.GITHUB_ACTIONS) console.log(`::error title=e2e failed::${name}`)
 }
 
 const browser = await chromium.launch()
@@ -168,6 +169,6 @@ try {
 }
 
 check('no JavaScript errors', errors.length === 0)
-if (errors.length) console.log(errors.join('\n'))
+if (errors.length) console.log(process.env.GITHUB_ACTIONS ? `::error title=Browser errors::${errors.join('%0A')}` : errors.join('\n'))
 await browser.close()
 process.exit(results.every((r) => r.ok) ? 0 : 1)
