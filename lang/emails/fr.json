@@ -3,6 +3,7 @@
 
   "greeting": "Bonjour {name},",
   "greeting_anonymous": "Bonjour,",
+  "signature": "Cordialement,",
   "automatic": "Ce message est automatique, merci de ne pas y répondre.",
   "fallback": "Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :",
   "unknown_sender": "Une personne",

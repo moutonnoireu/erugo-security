@@ -3,6 +3,7 @@
 
   "greeting": "Hello {name},",
   "greeting_anonymous": "Hello,",
+  "signature": "Kind regards,",
   "automatic": "This is an automatic message, please do not reply.",
   "fallback": "If the button does not work, copy this link into your browser:",
   "unknown_sender": "Someone",

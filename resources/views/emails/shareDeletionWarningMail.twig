@@ -5,7 +5,7 @@
 {% block content %}
 <p style="margin:0 0 12px;">{{ t('greeting', {name: share.user.first_name}) }}</p>
 <p style="margin:0 0 12px;">{{ t('share_deletion_warning.body', {share: share.name, delay: deletes_in}) }}</p>
-<p class="muted" style="margin:0;font-size:14px;color:#59655f;">{% if share.download_count > 0 %}{{ t('downloaded', {count: share.download_count}) }}{% else %}{{ t('not_downloaded') }}{% endif %}</p>
+<p class="muted" style="margin:0;font-size:14px;color:#6b7370;">{% if share.download_count > 0 %}{{ t('downloaded', {count: share.download_count}) }}{% else %}{{ t('not_downloaded') }}{% endif %}</p>
 {% endblock %}
 
 {% block action_url %}{{ settings.application_url }}{% endblock %}
