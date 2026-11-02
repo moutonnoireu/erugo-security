@@ -1363,6 +1363,42 @@ export const getEmailTemplates = async () => {
   return data.data.templates
 }
 
+// Email logo and languages
+const dataOrThrow = async (response) => {
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.message)
+  }
+  return data.data
+}
+
+export const getEmailBranding = async () =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-branding`, { method: 'GET', headers: { ...addJsonHeader() } }))
+
+export const saveEmailLogoPlate = async (plate) =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-branding/plate`, { method: 'PUT', headers: { ...addJsonHeader() }, body: JSON.stringify({ plate }) }))
+
+export const uploadEmailLogo = async (file) => {
+  const formData = new FormData()
+  formData.append('logo', file)
+  return dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-branding/logo`, { method: 'POST', headers: { Accept: 'application/json' }, body: formData }))
+}
+
+export const deleteEmailLogo = async () =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-branding/logo`, { method: 'DELETE', headers: { ...addJsonHeader() } }))
+
+export const getEmailLanguages = async () =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-languages`, { method: 'GET', headers: { ...addJsonHeader() } }))
+
+export const createEmailLanguage = async (code, name) =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-languages`, { method: 'POST', headers: { ...addJsonHeader() }, body: JSON.stringify({ code, name }) }))
+
+export const saveEmailLanguage = async (code, lines) =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-languages/${encodeURIComponent(code)}`, { method: 'PUT', headers: { ...addJsonHeader() }, body: JSON.stringify({ lines }) }))
+
+export const deleteEmailLanguage = async (code) =>
+  dataOrThrow(await fetchWithAuth(`${apiUrl}/api/email-languages/${encodeURIComponent(code)}`, { method: 'DELETE', headers: { ...addJsonHeader() } }))
+
 // System Stats Methods
 export const getSystemStats = async (days = 30) => {
   const response = await fetchWithAuth(`${apiUrl}/api/stats?days=${days}`, {

@@ -1,16 +1,11 @@
 {% extends 'emails/layout' %}
 
-{% block header %} You have files to download
-{% endblock %}
+{% block header %}{{ t('share_created.title') }}{% endblock %}
 
 {% block content %}
-<h2>Hi {{ recipient_name }},</h2>
-
-<p>{{ sender_name }} shared {{ share.file_count }} file{{ share.file_count == 1 ? '' : 's' }} with you.</p>
-<p>Click the button below to access your files.</p>
+<p style="margin:0 0 12px;">{{ t('greeting', {name: recipient_name}) }}</p>
+<p style="margin:0;">{{ t('share_created.body', {sender: sender_name, count: share.file_count}) }}</p>
 {% endblock %}
 
 {% block action_url %}{{ settings.application_url }}/shares/{{ share.long_id }}{% endblock %}
-{% block action_text %}
-	Download Files
-{% endblock %}
+{% block action_text %}{{ t('share_created.button') }}{% endblock %}

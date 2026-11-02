@@ -122,6 +122,7 @@ return [
             'TwigBridge\Extension\Laravel\Translator',
             'TwigBridge\Extension\Laravel\Url',
             'TwigBridge\Extension\Laravel\Model',
+            'App\Twig\EmailExtension',
             // 'TwigBridge\Extension\Laravel\Gate',
 
             // 'TwigBridge\Extension\Laravel\Form',

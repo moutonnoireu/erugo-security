@@ -1,16 +1,11 @@
 {% extends 'emails/layout' %}
 
-{% block header %}Account Created! Set your password
-{% endblock %}
+{% block header %}{{ t('account_created.title') }}{% endblock %}
 
 {% block content %}
-<h2>Hi {{ user.name }},</h2>
-
-<p>We've created an account for you on {{ settings.application_name }}.</p>
-<p>Please set your password to get started.</p>
+<p style="margin:0 0 12px;">{{ t('greeting', {name: user.name}) }}</p>
+<p style="margin:0;">{{ t('account_created.body', {app: settings.application_name}) }}</p>
 {% endblock %}
 
 {% block action_url %}{{ settings.application_url }}/reset-password/{{ token }}{% endblock %}
-{% block action_text %}
-	Set Password
-{% endblock %}
+{% block action_text %}{{ t('account_created.button') }}{% endblock %}

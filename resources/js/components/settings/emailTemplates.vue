@@ -8,6 +8,8 @@ import { mapSettings } from '../../utils'
 
 import { useTranslate } from '@tolgee/vue'
 import EmailTemplateEditor from '../emailTemplateEditor.vue'
+import EmailBranding from './emailBranding.vue'
+import EmailLanguages from './emailLanguages.vue'
 
 const { t } = useTranslate()
 
@@ -198,6 +200,16 @@ defineExpose({
               {{ $t('settings.emailTemplates.baseTemplate') }}
             </a>
           </li>
+          <li>
+            <a href="#" @click.prevent="handleNavItemClicked('emailLogo')">
+              {{ $t('settings.emailBranding.title') }}
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="handleNavItemClicked('emailLanguages')">
+              {{ $t('settings.emailLanguages.title') }}
+            </a>
+          </li>
           <li v-for="template in emailTemplates" :key="template.id">
             <a href="#" @click.prevent="handleNavItemClicked(template.id)">
               {{ $t(template.name) }}
@@ -228,6 +240,30 @@ defineExpose({
               <p>{{ $t('settings.emailTemplates.baseTemplateDescription') }}</p>
               <h6>{{ $t('settings.emailTemplates.sections.fallbackText') }}</h6>
               <p>{{ $t('settings.emailTemplates.sections.fallbackTextDescription') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-5">
+          <div class="col-12 col-md-8 pe-0 ps-0 ps-md-3">
+            <EmailBranding />
+          </div>
+          <div class="d-none d-md-block col ps-0">
+            <div class="section-help">
+              <h6>{{ $t('settings.emailBranding.title') }}</h6>
+              <p>{{ $t('settings.emailBranding.description') }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mb-5">
+          <div class="col-12 col-md-8 pe-0 ps-0 ps-md-3">
+            <EmailLanguages />
+          </div>
+          <div class="d-none d-md-block col ps-0">
+            <div class="section-help">
+              <h6>{{ $t('settings.emailLanguages.title') }}</h6>
+              <p>{{ $t('settings.emailLanguages.description') }}</p>
             </div>
           </div>
         </div>

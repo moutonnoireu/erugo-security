@@ -18,6 +18,8 @@ use App\Http\Controllers\AuthProvidersController;
 use App\Http\Controllers\UploadsController;
 use App\Http\Controllers\ReverseSharesController;
 use App\Http\Controllers\EmailTemplatesController;
+use App\Http\Controllers\EmailBrandingController;
+use App\Http\Controllers\EmailLanguagesController;
 use App\Http\Controllers\TusdHooksController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\SelfRegistrationController;
@@ -200,6 +202,20 @@ Route::group([], function ($router) {
     Route::group(['prefix' => 'email-templates', 'middleware' => ['auth', Admin::class]], function ($router) {
         Route::get('/', [EmailTemplatesController::class, 'index'])->name('email-templates.index');
         Route::put('/', [EmailTemplatesController::class, 'update'])->name('email-templates.update');
+    });
+
+    //manage e-mail logo and languages [auth, admin]
+    Route::group(['prefix' => 'email-branding', 'middleware' => ['auth', Admin::class]], function ($router) {
+        Route::get('/', [EmailBrandingController::class, 'show'])->name('email-branding.show');
+        Route::put('/plate', [EmailBrandingController::class, 'updatePlate'])->name('email-branding.plate');
+        Route::post('/logo', [EmailBrandingController::class, 'uploadLogo'])->name('email-branding.logo');
+        Route::delete('/logo', [EmailBrandingController::class, 'deleteLogo'])->name('email-branding.deleteLogo');
+    });
+    Route::group(['prefix' => 'email-languages', 'middleware' => ['auth', Admin::class]], function ($router) {
+        Route::get('/', [EmailLanguagesController::class, 'index'])->name('email-languages.index');
+        Route::post('/', [EmailLanguagesController::class, 'store'])->name('email-languages.store');
+        Route::put('/{code}', [EmailLanguagesController::class, 'update'])->name('email-languages.update');
+        Route::delete('/{code}', [EmailLanguagesController::class, 'destroy'])->name('email-languages.destroy');
     });
 
     //manage database backups [auth, admin]

@@ -1,17 +1,11 @@
 {% extends 'emails/layout' %}
 
-{% block header %}
-	Your share is expiring soon
-{% endblock %}
+{% block header %}{{ t('share_expiry_warning.title', {delay: share_expires_in}) }}{% endblock %}
 
 {% block content %}
-<h2>Hi {{ share.user.first_name }},</h2>
-<p>This is a reminder that your share ({{ share.name }} / {{ share.long_id }}) will expire in
-	{{ share_expires_in }}.</p>
-<p>You can extend the expiry date in the "My Shares" section of the app.</p>
+<p style="margin:0 0 12px;">{{ t('greeting', {name: share.user.first_name}) }}</p>
+<p style="margin:0;">{{ t('share_expiry_warning.body', {share: share.name, delay: share_expires_in}) }}</p>
 {% endblock %}
 
 {% block action_url %}{{ settings.application_url }}{% endblock %}
-{% block action_text %}
-	Visit {{ settings.application_name }}
-{% endblock %}
+{% block action_text %}{{ t('share_expiry_warning.button', {app: settings.application_name}) }}{% endblock %}

@@ -25,7 +25,7 @@ class shareDeletionWarningMail extends Mailable
     {
         $this->share = $share;
         $this->deletion_date = $share->expires_at;
-        $this->deletes_in = $share->expires_at->diffForHumans();
+        $this->deletes_in = $share->expires_at->copy()->locale(\App\Services\EmailTranslator::locale())->diffForHumans(['syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE]);
     }
 
     /**
@@ -34,7 +34,7 @@ class shareDeletionWarningMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: Setting::where('key', 'email_subject_shareDeletionWarningMail.twig')->first()->value,
+            subject: \App\Services\EmailTranslator::subject('shareDeletionWarningMail'),
         );
     }
 

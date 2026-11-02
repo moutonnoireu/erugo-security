@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Validator;
 use App\Utils\FileHelper;
+use App\Services\EmailTranslator;
 
 class EmailTemplatesController extends Controller
 {
@@ -34,7 +35,7 @@ class EmailTemplatesController extends Controller
         'id' => $templateName,
         'content' => $this->getTemplateContent($template_file),
         'variables' => $this->extractVariables($this->getTemplateContent($template_file)),
-        'subject' => $this->getSubject($templateName . '.twig'),
+        'subject' => EmailTranslator::subject(preg_replace('/V\d+$/', '', $templateName)),
         'requiredVariables' => $requiredVariables
       ];
     }
@@ -160,10 +161,14 @@ class EmailTemplatesController extends Controller
     $safeId = basename($template['id']);
     
     $template_file_path = storage_path('templates/emails/' . $safeId . '.twig');
-    Setting::updateOrCreate(
-      ['key' => 'email_subject_' . $safeId . '.twig'],
-      ['value' => $template['subject'], 'group' => 'system.emails.subjects']
-    );
+    // A subject left at the translated default is not stored, so it keeps following the language.
+    $baseId = preg_replace('/V\d+$/', '', $safeId);
+    if ($template['subject'] !== EmailTranslator::subject($baseId)) {
+      Setting::updateOrCreate(
+        ['key' => 'email_subject_' . $baseId . '.twig'],
+        ['value' => $template['subject'], 'group' => 'system.emails.subjects']
+      );
+    }
     if (!file_exists(dirname($template_file_path))) {
       mkdir(dirname($template_file_path), 0755, true);
     }

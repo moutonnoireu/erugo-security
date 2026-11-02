@@ -1,0 +1,69 @@
+{
+  "_meta.name": "Français",
+
+  "greeting": "Bonjour {name},",
+  "greeting_anonymous": "Bonjour,",
+  "automatic": "Ce message est automatique, merci de ne pas y répondre.",
+  "fallback": "Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :",
+  "unknown_sender": "Une personne",
+  "downloaded_one": "Il a été téléchargé une fois.",
+  "downloaded_other": "Il a été téléchargé {count} fois.",
+  "not_downloaded": "Il n’a pas été téléchargé.",
+
+  "subject.accountCreatedMail": "Votre compte a été créé",
+  "subject.emailVerificationMail": "Vérifiez votre adresse e-mail",
+  "subject.passwordResetMail": "Réinitialisation de votre mot de passe",
+  "subject.reverseShareInviteMail": "On vous demande de transmettre des fichiers",
+  "subject.shareCreatedMail": "Des fichiers vous attendent",
+  "subject.shareDownloadedMail": "Votre partage a été téléchargé",
+  "subject.shareExpiryWarningMail": "Votre partage arrive à expiration",
+  "subject.shareExpiredWarningMail": "Votre partage a expiré",
+  "subject.shareDeletionWarningMail": "Votre partage va être supprimé",
+  "subject.shareDeletedWarningMail": "Votre partage a été supprimé",
+
+  "account_created.title": "Votre compte a été créé",
+  "account_created.body": "Un compte a été créé pour vous sur {app}. Définissez votre mot de passe pour vous connecter.",
+  "account_created.button": "Définir mon mot de passe",
+
+  "email_verification.title": "Vérifiez votre adresse e-mail",
+  "email_verification.body": "Saisissez ce code pour activer votre compte sur {app}.",
+  "email_verification.expires": "Ce code expire dans 15 minutes.",
+  "email_verification.ignore": "Si vous n’avez pas créé de compte, ignorez ce message.",
+
+  "password_reset.title": "Réinitialisation de votre mot de passe",
+  "password_reset.body": "Nous avons reçu une demande de réinitialisation de votre mot de passe sur {app}.",
+  "password_reset.button": "Réinitialiser mon mot de passe",
+  "password_reset.ignore": "Si vous n’êtes pas à l’origine de cette demande, ignorez ce message.",
+
+  "reverse_share_invite.title": "{sender} vous demande de transmettre des fichiers",
+  "reverse_share_invite.body_existing": "Connectez-vous à votre compte pour envoyer des fichiers à {sender}.",
+  "reverse_share_invite.body_new": "Acceptez la demande pour envoyer des fichiers à {sender}.",
+  "reverse_share_invite.message": "Message de {sender} :",
+  "reverse_share_invite.button_existing": "Me connecter et envoyer",
+  "reverse_share_invite.button_new": "Accepter la demande",
+
+  "share_created.title": "Des fichiers vous attendent",
+  "share_created.body_one": "{sender} a partagé 1 fichier avec vous.",
+  "share_created.body_other": "{sender} a partagé {count} fichiers avec vous.",
+  "share_created.button": "Consulter les fichiers",
+
+  "share_downloaded.title": "Votre partage a été téléchargé",
+  "share_downloaded.body": "Le partage « {share} » a été téléchargé.",
+  "share_downloaded.button": "Consulter le partage",
+
+  "share_expiry_warning.title": "Votre partage expire dans {delay}",
+  "share_expiry_warning.body": "Le partage « {share} » ne sera plus disponible dans {delay}. Vous pouvez prolonger sa date d’expiration dans Mes partages.",
+  "share_expiry_warning.button": "Ouvrir {app}",
+
+  "share_expired.title": "Votre partage a expiré",
+  "share_expired.body": "Le partage « {share} » a expiré et n’est plus disponible. Vous pouvez le rétablir dans Mes partages.",
+  "share_expired.button": "Ouvrir {app}",
+
+  "share_deletion_warning.title": "Votre partage sera supprimé dans {delay}",
+  "share_deletion_warning.body": "Le partage « {share} » sera supprimé définitivement dans {delay}. Rétablissez-le dans Mes partages pour le conserver.",
+  "share_deletion_warning.button": "Ouvrir {app}",
+
+  "share_deleted.title": "Votre partage a été supprimé",
+  "share_deleted.body": "Le partage « {share} » a été supprimé définitivement. Il ne peut pas être rétabli.",
+  "share_deleted.button": "Ouvrir {app}"
+}

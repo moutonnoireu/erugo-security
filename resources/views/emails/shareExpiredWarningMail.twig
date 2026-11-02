@@ -1,28 +1,12 @@
 {% extends 'emails/layout' %}
 
-{% block header %}
-	Your share has expired
-{% endblock %}
+{% block header %}{{ t('share_expired.title') }}{% endblock %}
 
 {% block content %}
-<h2>Hi {{ share.user.first_name }},</h2>
-<p>This is a reminder that your share ({{ share.name }}
-	/
-	{{ share.long_id }}) has expired.</p>
-
-{% if share.download_count > 0 %}
-	<p>The share has been downloaded
-		{{ share.download_count }}
-		time{{ share.download_count == 1 ? '' : 's' }}.</p>
-{% else %}
-	<p>The share wasn't downloaded.</p>
-{% endif %}
-
-<p>You can revive it in the "My Shares" section of the app.</p>
+<p style="margin:0 0 12px;">{{ t('greeting', {name: share.user.first_name}) }}</p>
+<p style="margin:0 0 12px;">{{ t('share_expired.body', {share: share.name}) }}</p>
+<p class="muted" style="margin:0;font-size:14px;color:#59655f;">{% if share.download_count > 0 %}{{ t('downloaded', {count: share.download_count}) }}{% else %}{{ t('not_downloaded') }}{% endif %}</p>
 {% endblock %}
 
 {% block action_url %}{{ settings.application_url }}{% endblock %}
-{% block action_text %}
-	Visit
-	{{ settings.application_name }}
-{% endblock %}
+{% block action_text %}{{ t('share_expired.button', {app: settings.application_name}) }}{% endblock %}
