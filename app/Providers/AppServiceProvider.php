@@ -30,9 +30,11 @@ class AppServiceProvider extends ServiceProvider
                 $settingsService = app(SettingsService::class);
                 $settings = $settingsService->getGlobalViewData();
                 $view->with('settings', $settings);
+                $view->with('brand', \App\Services\EmailBrand::toArray());
             } catch (\Exception $e) {
                 // If settings can't be loaded, provide empty defaults
                 $view->with('settings', []);
+                $view->with('brand', ['name' => '', 'url' => '', 'logo_url' => null, 'plate' => '#ffffff', 'plate_ink' => '#14201d', 'accent' => '#1f5a6e', 'accent_ink' => '#ffffff', 'lang' => 'en']);
             }
         });
 

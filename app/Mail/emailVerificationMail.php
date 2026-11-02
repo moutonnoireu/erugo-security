@@ -33,7 +33,7 @@ class emailVerificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: Setting::where('key', 'email_subject_emailVerificationMail.twig')->first()->value,
+            subject: \App\Services\EmailTranslator::subject('emailVerificationMail'),
         );
     }
 

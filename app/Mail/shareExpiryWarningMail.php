@@ -23,7 +23,7 @@ class shareExpiryWarningMail extends Mailable
     public function __construct(Share $share)
     {
         $this->share = $share;
-        $this->share_expires_in = $share->expires_at->diffForHumans();
+        $this->share_expires_in = $share->expires_at->copy()->locale(\App\Services\EmailTranslator::locale())->diffForHumans(['syntax' => \Carbon\CarbonInterface::DIFF_ABSOLUTE]);
     }
 
     /**
@@ -32,7 +32,7 @@ class shareExpiryWarningMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: Setting::where('key', 'email_subject_shareExpiryWarningMail.twig')->first()->value,
+            subject: \App\Services\EmailTranslator::subject('shareExpiryWarningMail'),
         );
     }
 

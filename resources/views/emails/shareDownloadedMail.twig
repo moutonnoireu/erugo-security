@@ -1,17 +1,11 @@
 {% extends 'emails/layout' %}
 
-{% block header %}Share Downloaded
-{% endblock %}
+{% block header %}{{ t('share_downloaded.title') }}{% endblock %}
 
 {% block content %}
-<h2>Hi {{ share.user.name }},</h2>
-<p>Just thought you'd like to know that your share "{{ share.name }}" was downloaded.</p>
-<p>
-	<small>We'll only send this the first time a share is downloaded.</small>
-</p>
+<p style="margin:0 0 12px;">{{ t('greeting', {name: share.user.name}) }}</p>
+<p style="margin:0;">{{ t('share_downloaded.body', {share: share.name}) }}</p>
 {% endblock %}
 
 {% block action_url %}{{ settings.application_url }}/shares/{{ share.long_id }}{% endblock %}
-{% block action_text %}
-	View Share
-{% endblock %}
+{% block action_text %}{{ t('share_downloaded.button') }}{% endblock %}

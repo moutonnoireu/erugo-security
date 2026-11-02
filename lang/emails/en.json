@@ -1,0 +1,70 @@
+{
+  "_meta.name": "English",
+
+  "greeting": "Hello {name},",
+  "greeting_anonymous": "Hello,",
+  "signature": "Kind regards,",
+  "automatic": "This is an automatic message, please do not reply.",
+  "fallback": "If the button does not work, copy this link into your browser:",
+  "unknown_sender": "Someone",
+  "downloaded_one": "It has been downloaded once.",
+  "downloaded_other": "It has been downloaded {count} times.",
+  "not_downloaded": "It has not been downloaded.",
+
+  "subject.accountCreatedMail": "Your account has been created",
+  "subject.emailVerificationMail": "Verify your email address",
+  "subject.passwordResetMail": "Reset your password",
+  "subject.reverseShareInviteMail": "You have been asked to send files",
+  "subject.shareCreatedMail": "Files are waiting for you",
+  "subject.shareDownloadedMail": "Your share has been downloaded",
+  "subject.shareExpiryWarningMail": "Your share expires soon",
+  "subject.shareExpiredWarningMail": "Your share has expired",
+  "subject.shareDeletionWarningMail": "Your share will be deleted soon",
+  "subject.shareDeletedWarningMail": "Your share has been deleted",
+
+  "account_created.title": "Your account has been created",
+  "account_created.body": "An account has been created for you on {app}. Set your password to sign in.",
+  "account_created.button": "Set my password",
+
+  "email_verification.title": "Verify your email address",
+  "email_verification.body": "Enter this code to activate your account on {app}.",
+  "email_verification.expires": "This code expires in 15 minutes.",
+  "email_verification.ignore": "If you did not create an account, you can ignore this message.",
+
+  "password_reset.title": "Reset your password",
+  "password_reset.body": "We received a request to reset your password on {app}.",
+  "password_reset.button": "Reset my password",
+  "password_reset.ignore": "If you did not make this request, you can ignore this message.",
+
+  "reverse_share_invite.title": "{sender} asks you to send files",
+  "reverse_share_invite.body_existing": "Sign in to your account to send files to {sender}.",
+  "reverse_share_invite.body_new": "Accept the request to send files to {sender}.",
+  "reverse_share_invite.message": "Message from {sender}:",
+  "reverse_share_invite.button_existing": "Sign in and send files",
+  "reverse_share_invite.button_new": "Accept the request",
+
+  "share_created.title": "Files are waiting for you",
+  "share_created.body_one": "{sender} has shared 1 file with you.",
+  "share_created.body_other": "{sender} has shared {count} files with you.",
+  "share_created.button": "View the files",
+
+  "share_downloaded.title": "Your share has been downloaded",
+  "share_downloaded.body": "The share “{share}” has been downloaded.",
+  "share_downloaded.button": "View the share",
+
+  "share_expiry_warning.title": "Your share expires in {delay}",
+  "share_expiry_warning.body": "The share “{share}” will no longer be available in {delay}. You can extend its expiry date in My shares.",
+  "share_expiry_warning.button": "Open {app}",
+
+  "share_expired.title": "Your share has expired",
+  "share_expired.body": "The share “{share}” has expired and is no longer available. You can restore it in My shares.",
+  "share_expired.button": "Open {app}",
+
+  "share_deletion_warning.title": "Your share will be deleted in {delay}",
+  "share_deletion_warning.body": "The share “{share}” will be permanently deleted in {delay}. Restore it in My shares to keep it.",
+  "share_deletion_warning.button": "Open {app}",
+
+  "share_deleted.title": "Your share has been deleted",
+  "share_deleted.body": "The share “{share}” has been permanently deleted. It cannot be restored.",
+  "share_deleted.button": "Open {app}"
+}

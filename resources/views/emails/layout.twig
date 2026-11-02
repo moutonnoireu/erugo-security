@@ -1,102 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="{{ brand.lang|default('en') }}" xmlns="http://www.w3.org/1999/xhtml">
 	<head>
-		<meta charset="utf-8"/>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>
-			{% block title %}{% endblock %}
-		</title>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="color-scheme" content="light dark">
+		<meta name="supported-color-schemes" content="light dark">
+		<title>{% block title %}{{ block('header')|striptags|trim }}{% endblock %}</title>
 		<style>
-			body {
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-				background-color: #f8fafc;
-				color: #374151;
-				line-height: 1.5;
-				margin: 0;
-				padding: 0;
+			body { margin: 0; padding: 0; background-color: #ffffff; }
+			table { border-collapse: collapse; }
+			img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+			@media only screen and (max-width: 620px) {
+				.wrap { width: 100% !important; }
+				.pad { padding-left: 20px !important; padding-right: 20px !important; }
 			}
-
-			.container {
-				max-width: 600px;
-				margin: 0 auto;
-				padding: 20px;
-			}
-
-			.header {
-				text-align: center;
-				padding: 20px 0;
-				background-color: #ffffff;
-				border-radius: 8px 8px 0 0;
-				border-bottom: 2px solid #e5e7eb;
-			}
-
-			.content {
-				background-color: #ffffff;
-				padding: 30px;
-				border-radius: 0 0 8px 8px;
-			}
-
-			.footer {
-				text-align: center;
-				padding: 20px;
-				font-size: 0.875rem;
-				color: #6b7280;
-			}
-
-			.button {
-				display: inline-block;
-				padding: 12px 24px;
-				background-color: #2563eb;
-				color: #ffffff;
-				text-decoration: none;
-				border-radius: 6px;
-				margin: 20px 0;
-			}
-
-			.button:hover {
-				background-color: #1d4ed8;
-			}
-
-			@media only screen and(max-width: 600px) {
-				.container {
-					padding: 10px;
-				}
-
-				.content {
-					padding: 20px;
-				}
+			@media (prefers-color-scheme: dark) {
+				body, .outer, .page { background-color: #1d2221 !important; }
+				.title, .text { color: #e9eeec !important; }
+				.muted { color: #a9b5b1 !important; }
+				.rule { border-color: #3a4543 !important; }
 			}
 		</style>
 	</head>
-
-	<body>
-		<div class="container">
-			<div
-				class="header">
-				<!-- You can add your logo here -->
-				<h1>
-					{% block header %}{% endblock %}
-				</h1>
-			</div>
-
-			<div class="content"> {% block content %}{% endblock %}
-				{% if block('action_url') is defined %}
-					<div style="text-align: center">
-						<a href="{{ block('action_url') }}" class="button">{{ block('action_text')|default('Click Here') }}</a>
-					</div>
-					<br><br>
-					<p class="f-fallback sub">{{ settings.email_template_fallback_text }}</p>
-					<p class="f-fallback sub">{{ block('action_url') }}</p>
-				{% endif %}
-			</div>
-
-			<div class="footer">
-				<p>
-					<small>
-						<a href="{{ settings.application_url }}">{{ settings.application_name }}</a>
-					</small>
-				</p>
-			</div>
-		</div>
+	<body style="margin:0;padding:0;background-color:#ffffff;">
+		<table role="presentation" class="outer" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;">
+			<tr>
+				<td class="page" align="center" bgcolor="#ffffff" style="background-color:#ffffff;padding:24px 12px 32px;">
+					<table role="presentation" class="wrap" width="570" cellpadding="0" cellspacing="0" border="0" style="width:570px;max-width:100%;">
+						<tr>
+							<td class="pad" align="left" style="padding:16px 32px 20px;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;line-height:1.3;color:#6b7370;">
+								{% if brand.logo_url %}
+									<span style="display:inline-block;background-color:{{ brand.plate|default('#ffffff') }};padding:8px 12px;"><img src="{{ brand.logo_url }}" alt="{{ brand.name }}" height="40" style="display:block;height:40px;width:auto;max-width:100%;"></span>
+								{% else %}
+									<span class="muted">{{ brand.name }}</span>
+								{% endif %}
+							</td>
+						</tr>
+						<tr>
+							<td class="pad" align="left" style="padding:8px 32px 0;font-family:Helvetica,Arial,sans-serif;">
+								<h1 class="title" style="margin:0 0 18px;font-size:22px;line-height:1.3;font-weight:700;color:#222222;">{% block header %}{% endblock %}</h1>
+								<div class="text" style="font-size:16px;line-height:1.625;color:#333333;">
+									{% block content %}{% endblock %}
+								</div>
+								{% if block('action_url') is defined %}
+									<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 26px;">
+										<tr>
+											<td align="center" bgcolor="{{ brand.accent|default('#1f5a6e') }}" style="background-color:{{ brand.accent|default('#1f5a6e') }};border-radius:3px;">
+												<a href="{{ block('action_url')|trim }}" style="display:inline-block;padding:12px 22px;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;line-height:1.2;color:{{ brand.accent_ink|default('#ffffff') }};text-decoration:none;border-radius:3px;">{{ block('action_text')|trim }}</a>
+											</td>
+										</tr>
+									</table>
+								{% endif %}
+								<p class="text" style="margin:{% if block('action_url') is defined %}0{% else %}22px{% endif %} 0 0;font-size:16px;line-height:1.625;color:#333333;">{{ t('signature') }}<br>{{ brand.name }}</p>
+								<hr class="rule" style="border:0;border-top:1px solid #e5e5e5;margin:26px 0 14px;">
+								{% if block('action_url') is defined %}
+									<p class="muted" style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6b7370;">{{ t('fallback') }}</p>
+									<p class="muted" style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#6b7370;word-break:break-all;"><a href="{{ block('action_url')|trim }}" style="color:#6b7370;text-decoration:underline;">{{ block('action_url')|trim }}</a></p>
+								{% endif %}
+								<p class="muted" style="margin:0;font-size:13px;line-height:1.5;color:#6b7370;">{{ t('automatic') }}</p>
+							</td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+		</table>
 	</body>
 </html>
