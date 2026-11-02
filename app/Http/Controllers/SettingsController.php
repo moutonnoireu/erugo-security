@@ -132,7 +132,9 @@ class SettingsController extends Controller
             ->pluck('value', 'key');
 
         $enabled = ($incoming[IpAllowlist::SETTING_ENABLED] ?? $current[IpAllowlist::SETTING_ENABLED] ?? 'false') === 'true';
-        $entries = IpAllowlist::parse((string) ($incoming[IpAllowlist::SETTING_LIST] ?? $current[IpAllowlist::SETTING_LIST] ?? ''));
+        // The settings form serializes a null value as the string "null" (see SettingsService::get): no entries.
+        $rawList = (string) ($incoming[IpAllowlist::SETTING_LIST] ?? $current[IpAllowlist::SETTING_LIST] ?? '');
+        $entries = IpAllowlist::parse($rawList === 'null' ? '' : $rawList);
 
         $invalid = IpAllowlist::invalidEntries($entries);
         if ($invalid !== []) {

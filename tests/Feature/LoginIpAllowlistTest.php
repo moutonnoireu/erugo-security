@@ -157,6 +157,24 @@ class LoginIpAllowlistTest extends TestCase
             ->assertJson(['code' => 'ip_allowlist_invalid', 'data' => ['invalid' => ['not-an-ip']]]);
     }
 
+    public function test_an_empty_list_sent_by_the_settings_form_saves(): void
+    {
+        $admin = $this->makeUser(['admin' => true]);
+
+        // The form sends '' on a first save, which reaches the database as NULL; it then reloads null
+        // and sends it back as the string "null" (JSON.stringify(null)). That is "no entries", not an invalid one.
+        Setting::where('key', IpAllowlist::SETTING_LIST)->update(['value' => null]);
+        app(SettingsService::class)->clearCache();
+
+        foreach (['null', ''] as $value) {
+            $this->putJson('/api/settings', ['settings' => [
+                ['key' => IpAllowlist::SETTING_ENABLED, 'value' => 'false'],
+                ['key' => IpAllowlist::SETTING_LIST, 'value' => $value],
+            ]], $this->bearer($admin))
+                ->assertOk();
+        }
+    }
+
     public function test_security_settings_are_hidden_from_non_admins(): void
     {
         $user = $this->makeUser();
