@@ -204,10 +204,32 @@ jobs:
       - name: Sign the image (keyless)
         env:
           DIGEST: ${{ steps.index.outputs.digest }}
+          TAGS: ${{ needs.resolve.outputs.tags }}
         run: |
-          # signs the multi-arch index and each platform image; the signature,
-          # its certificate and a transparency log entry are public (Rekor)
-          cosign sign --yes --recursive "${IMAGE}@${DIGEST}"
+          # signs the multi-arch index, then each manifest it points to (platform images and
+          # their SBOM/provenance attestations); the signature, its certificate and a
+          # transparency log entry are public (Rekor)
+          FIRST=$(echo "$TAGS" | head -1)
+          sign_one() {
+            if cosign sign --yes "${IMAGE}@$1" 2> sign.err; then return 0; fi
+            # A manifest whose content did not change keeps its digest from one build to the next.
+            # Rekor then answers 409 "an equivalent entry already exists": that is fine as long as
+            # a valid signature of this workflow is already attached, which is checked here.
+            if grep -q "createLogEntryConflict" sign.err; then
+              echo "::notice::$1 is already in the transparency log, checking its signature"
+              cosign verify "${IMAGE}@$1" \
+                --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+                --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/docker\.yml@" \
+                > /dev/null
+              return $?
+            fi
+            cat sign.err >&2
+            return 1
+          }
+          sign_one "$DIGEST"
+          for child in $(docker buildx imagetools inspect "$FIRST" --raw | jq -r '.manifests[].digest' | sort -u); do
+            sign_one "$child"
+          done
       - name: Verify the signature
         env:
           DIGEST: ${{ steps.index.outputs.digest }}
