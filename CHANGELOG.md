@@ -6,7 +6,7 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt weekly from scratch to pick up Alpine and PHP security updates.
 
-## [Unreleased]
+## [0.2.15-sec.2] - 2026-11-07
 
 ### Privacy and security
 - **No third-party requests**: the Outfit font and Bootstrap CSS are served by Erugo itself instead of
@@ -14,6 +14,11 @@ Every release image is rebuilt weekly from scratch to pick up Alpine and PHP sec
   address to those services. The unused Material Icons and Font Awesome stylesheets are removed.
 - **Stricter Content-Security-Policy**: no inline `<style>` elements and no external origins. Theme
   colors are served as `/theme.css`, and the ALTCHA widget loads its stylesheet instead of injecting it.
+
+### E-mails
+- **New e-mail layout**: plain text with one button, name or logo on top, readable in dark mode and Outlook.
+  Texts are in `lang/emails/<code>.json` (French and English); languages and the e-mail logo are set in
+  *Settings*.
 
 ### Fixes
 - **System settings and profile pages no longer go blank**: with an authentication provider that has a
@@ -23,7 +28,15 @@ Every release image is rebuilt weekly from scratch to pick up Alpine and PHP sec
 - **Expired-share warnings no longer stall on a deleted owner**: when a share's owner account had been
   deleted (`shares.user_id` is set to `NULL`), the hourly `sendExpiredWarningEmails` job crashed on that share
   before marking it processed, retried it every hour, and never reached the shares after it. The share is now
-  marked processed without a mail, and the other shares get their warning.
+  marked processed without a mail, and the other shares get their warning. The expiry and deletion
+  warnings skip such shares too.
+- **Saving the settings**: an empty IP allowlist no longer makes the save fail, "authentication providers
+  saved" is no longer shown on every save, and a failed provider save is reported as an error.
+
+### Dependencies
+- Symfony components 7.4.23 / contracts 3.8.1: fixes for the November 2026 Symfony advisories
+  (serializer, routing, http-foundation, http-kernel, yaml), including CVE-2026-118514, CVE-2026-118515
+  and CVE-2026-118516.
 
 ## [0.2.15-sec.1] - 2026-10-30
 
