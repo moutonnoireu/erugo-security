@@ -16,6 +16,10 @@ Every release image is rebuilt weekly from scratch to pick up Alpine and PHP sec
   colors are served as `/theme.css`, and the ALTCHA widget loads its stylesheet instead of injecting it.
 
 ### Fixes
+- **System settings and profile pages no longer go blank**: with an authentication provider that has a
+  custom icon, these pages called DOMPurify without importing it and stopped rendering. A theme missing
+  some values (saved by an older version or edited by hand) also broke the settings pages; missing values
+  are now skipped and the defaults apply.
 - **Expired-share warnings no longer stall on a deleted owner**: when a share's owner account had been
   deleted (`shares.user_id` is set to `NULL`), the hourly `sendExpiredWarningEmails` job crashed on that share
   before marking it processed, retried it every hour, and never reached the shares after it. The share is now

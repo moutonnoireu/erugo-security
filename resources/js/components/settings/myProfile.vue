@@ -1,4 +1,5 @@
 <script setup>
+import DOMPurify from 'dompurify'
 import { ref, onMounted, defineExpose, nextTick } from 'vue'
 import { getMyProfile, updateMyProfile, getAvailableAuthProviders, unlinkProvider } from '../../api'
 import { User, CircleX, UserRoundCheck, UserRoundPen, Fingerprint, Link, Unlink, ShieldCheck } from 'lucide-vue-next'
