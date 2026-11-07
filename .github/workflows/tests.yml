@@ -61,6 +61,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      - name: Frontend static checks
+        run: node tests/frontend/static-checks.mjs
       - name: npm audit (high and critical)
         run: npm audit --omit=dev --audit-level=high
       - run: npx vite build

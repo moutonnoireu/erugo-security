@@ -1,4 +1,5 @@
 <script setup>
+import DOMPurify from 'dompurify'
 import { ref, onMounted, defineExpose, inject, computed, nextTick, watch } from 'vue'
 import {
   Settings,
