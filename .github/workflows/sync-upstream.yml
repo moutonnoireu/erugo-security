@@ -23,11 +23,13 @@ jobs:
         run: |
           git remote add upstream https://github.com/ErugoOSS/Erugo.git
           git fetch upstream --tags --no-recurse-submodules
-          latest=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          # Upstream tags only: the fork's own v*-sec.* tags must not count.
+          latest=$(git ls-remote --tags --refs upstream 'v*' | sed 's|.*refs/tags/||' | sort -V | tail -1)
           current=$(cat .upstream-version)
           [ "$latest" = "$current" ] && { echo "up to date ($current)"; exit 0; }
           git config user.name "github-actions"
           git config user.email "github-actions@users.noreply.github.com"
+          git ls-remote --exit-code --heads origin "sync/$latest" >/dev/null 2>&1             && { echo "sync/$latest already exists, nothing to do"; exit 0; }
           git checkout -b "sync/$latest"
           git merge --no-edit "$latest"
           echo "$latest" > .upstream-version
