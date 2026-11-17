@@ -6,6 +6,14 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt weekly from scratch to pick up Alpine and PHP security updates.
 
+## [0.2.15-sec.3] - 2026-11-17
+
+### Dependencies
+- Laravel 12.73.0: fixes the "Task Output Injection" advisory in the Concurrency component
+  (affected `<12.71.0`).
+- phpseclib 3.0.58: fixes the unbounded PBKDF iteration count in encrypted key, PFX and CMS parsing
+  (CPU-exhaustion denial of service).
+
 ## [0.2.15-sec.2] - 2026-11-07
 
 ### Privacy and security
