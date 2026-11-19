@@ -5,8 +5,8 @@ on:
     branches: [php-fix]
     tags: ["v*"]
   schedule:
-    # Weekly rebuild of the latest release, to pick up Alpine/PHP security fixes
-    - cron: '0 4 * * 1'
+    # Daily rebuild of the latest release, to pick up Alpine/PHP security fixes
+    - cron: '0 5 * * *'
   workflow_dispatch:
 
 env:
@@ -34,7 +34,7 @@ jobs:
       # What to build and how to tag it:
       #   push to php-fix          -> :edge, :sha-<commit>
       #   tag vX.Y.Z-sec.N         -> :X.Y.Z-sec.N, :X.Y.Z, :latest
-      #   weekly / manual rebuild  -> the latest release tag, same tags as a release
+      #   daily / manual rebuild  -> the latest release tag, same tags as a release
       - name: Resolve version and tags
         id: ver
         run: |

@@ -4,7 +4,7 @@ Versions are `<upstream Erugo version>-sec.<n>`: `0.2.15-sec.1` is the first sec
 based on Erugo 0.2.15. Image tags: `X.Y.Z-sec.N` (fixed), `X.Y.Z` (latest fork release for that upstream
 version), `latest` (latest release), `edge` (current `php-fix` branch, not a release).
 
-Every release image is rebuilt weekly from scratch to pick up Alpine and PHP security updates.
+Every release image is rebuilt daily from scratch to pick up Alpine and PHP security updates.
 
 ## [0.2.15-sec.3] - 2026-11-17
 
