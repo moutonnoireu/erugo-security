@@ -19,6 +19,12 @@ onMounted(async () => {
   // "external" build + stylesheet: the default build injects a <style> element,
   // which the Content-Security-Policy refuses
   await Promise.all([import('altcha/external'), import('altcha/altcha.css')])
+  // The "external" build bundles no solver: register the SHA worker, otherwise
+  // the widget fails with "Unsupported algorithm SHA-256".
+  const { default: ShaWorker } = await import('altcha/workers/sha?worker')
+  for (const algorithm of ['SHA-256', 'SHA-384', 'SHA-512']) {
+    globalThis.$altcha.algorithms.set(algorithm, () => new ShaWorker())
+  }
   await Promise.all([
     import('altcha/i18n/de'),
     import('altcha/i18n/fr-fr'),
