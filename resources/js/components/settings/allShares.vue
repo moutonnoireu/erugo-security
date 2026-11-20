@@ -289,8 +289,10 @@ defineExpose({
 .files-container {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   .file {
     display: flex;
     flex-direction: column;
