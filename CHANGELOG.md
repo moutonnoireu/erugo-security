@@ -6,6 +6,15 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt daily from scratch to pick up Alpine and PHP security updates.
 
+## [0.2.15-sec.4] - 2026-11-20
+
+### Fixes
+- ALTCHA: register the SHA solver worker. The `altcha/external` build bundles no solver, so every
+  challenge failed with `Unsupported algorithm SHA-256`.
+- Checkbox: the checked mark no longer depends on the Material Icons font, which is not served.
+- French: "Tous les partages" (was "Toutes les partages").
+- All shares table: file chips wrap, so the table no longer scrolls horizontally.
+
 ## [0.2.15-sec.3] - 2026-11-17
 
 ### Dependencies
