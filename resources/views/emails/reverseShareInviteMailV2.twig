@@ -15,6 +15,6 @@
 {% endif %}
 {% endblock %}
 
-{% block action_url %}{% if isExistingUser %}{{ settings.application_url }}/?invite_id={{ invite.id }}{% else %}{{ settings.application_url }}/?invite_token={{ token }}{% endif %}{% endblock %}
+{% block action_url %}{{ invite_url }}{% endblock %}
 
 {% block action_text %}{% if isExistingUser %}{{ t('reverse_share_invite.button_existing') }}{% else %}{{ t('reverse_share_invite.button_new') }}{% endif %}{% endblock %}

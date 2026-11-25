@@ -64,6 +64,7 @@ class EmailTemplatesTest extends TestCase
             'recipient_name' => 'Jean Martin',
             'sender_name' => 'Marie Dupont',
             'isExistingUser' => false,
+            'invite_url' => 'https://partage.example.test/?invite_token=tok123',
             'invite' => (object) ['id' => 7, 'message' => 'Merci d’avance.'],
             'share_expires_in' => '3 days',
             'deletes_in' => '3 days',
