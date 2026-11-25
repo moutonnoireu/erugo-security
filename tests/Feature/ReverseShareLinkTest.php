@@ -165,6 +165,42 @@ class ReverseShareLinkTest extends TestCase
         $this->assertTrue(ReverseShareInvite::firstOrFail()->isUsed());
     }
 
+    public function test_invite_endpoint_sets_the_expiry_of_invite_and_token(): void
+    {
+        Queue::fake();
+        $owner = $this->user();
+
+        $this->postJson('/api/reverse-shares/invite', [
+            'recipient_name' => 'A B', 'recipient_email' => 'a@example.test', 'expiry_days' => 14,
+        ], $this->bearer($owner))->assertOk();
+
+        $invite = ReverseShareInvite::firstOrFail();
+        $this->assertEqualsWithDelta(now()->addDays(14)->timestamp, $invite->expires_at->timestamp, 5);
+
+        Queue::assertPushed(\App\Jobs\sendEmail::class, function ($job) {
+            $payload = json_decode(base64_decode(explode('.', Crypt::decryptString($job->mailableData['token']))[1]), true);
+
+            return abs($payload['exp'] - now()->addDays(14)->timestamp) < 10;
+        });
+    }
+
+    public function test_invite_endpoint_defaults_to_seven_days_and_validates_expiry(): void
+    {
+        Queue::fake();
+        $owner = $this->user();
+        $base = ['recipient_name' => 'A B', 'recipient_email' => 'a@example.test'];
+
+        $this->postJson('/api/reverse-shares/invite', $base, $this->bearer($owner))->assertOk();
+        $this->assertEqualsWithDelta(now()->addDays(7)->timestamp, ReverseShareInvite::firstOrFail()->expires_at->timestamp, 5);
+
+        foreach ([0, 31, 'abc'] as $days) {
+            $this->postJson('/api/reverse-shares/invite', $base + ['expiry_days' => $days], $this->bearer($owner))
+                ->assertStatus(422)
+                ->assertJsonStructure(['data' => ['errors' => ['expiry_days']]]);
+        }
+        $this->assertSame(1, ReverseShareInvite::count());
+    }
+
     public function test_invite_mail_url_is_built_by_the_shared_method(): void
     {
         $this->setSetting('application_url', 'https://partage.example.test');

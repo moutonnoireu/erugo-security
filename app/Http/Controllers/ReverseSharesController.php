@@ -9,7 +9,6 @@ use App\Models\User;
 use App\Models\ReverseShareInvite;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Crypt;
 use App\Jobs\sendEmail;
 use App\Mail\reverseShareInviteMail;
 use App\Models\Setting;
@@ -25,7 +24,7 @@ class ReverseSharesController extends Controller
         return filter_var($value, FILTER_VALIDATE_BOOLEAN);
     }
 
-    public function createInvite(Request $request)
+    public function createInvite(Request $request, ReverseShareLinks $links)
     {
 
         if (!$this->reverseSharesAllowed()) {
@@ -37,7 +36,9 @@ class ReverseSharesController extends Controller
 
         $validator = Validator::make($request->all(), [
             'recipient_name' => ['required', 'string', 'max:255'],
-            'recipient_email' => ['required', 'email', 'max:255']
+            'recipient_email' => ['required', 'email', 'max:255'],
+            'message' => ['nullable', 'string', 'max:1000'],
+            'expiry_days' => ['nullable', 'integer', 'min:1', 'max:30'],
         ]);
 
         if ($validator->fails()) {
@@ -58,6 +59,8 @@ class ReverseSharesController extends Controller
                 'message' => 'Unauthorized'
             ], 401);
         }
+
+        $expiryDays = (int) ($request->input('expiry_days') ?: 7);
 
         // Check if recipient is an existing non-guest user
         $existingUser = User::where('email', $request->recipient_email)
@@ -86,8 +89,7 @@ class ReverseSharesController extends Controller
             $guestUserId = $guestUser->id;
 
             // Generate a token only for guest users
-            $token = auth()->tokenById($guestUser->id);
-            $encryptedToken = Crypt::encryptString($token);
+            $encryptedToken = $links->guestToken($guestUser, $expiryDays);
         }
 
         $invite = ReverseShareInvite::create([
@@ -96,7 +98,7 @@ class ReverseSharesController extends Controller
             'recipient_name' => $request->recipient_name,
             'recipient_email' => $request->recipient_email,
             'message' => $request->message,
-            'expires_at' => now()->addDays(7)
+            'expires_at' => now()->addDays($expiryDays)
         ]);
 
         sendEmail::dispatch($request->recipient_email, reverseShareInviteMail::class, [
