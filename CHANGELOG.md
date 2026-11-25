@@ -6,6 +6,19 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt daily from scratch to pick up Alpine and PHP security updates.
 
+## [0.2.15-sec.5] - 2026-11-25
+
+### Features
+- `POST /api/reverse-shares/link` creates a reverse share invite and returns its link without sending
+  any e-mail (`recipient_name`, `message`, `expiry_days` 1-30, all optional).
+- `POST /api/reverse-shares/invite` accepts `expiry_days` (1-30, default 7) and `message`. The guest
+  token of the e-mail link now lasts as long as the invite (it was 60 minutes).
+
+### Dependencies
+- Twig 3.31.1: sandbox policy bypasses and autoescaping advisories (affected `<3.31.1`).
+- web-auth/webauthn-lib 5.3.17: CBOR denial of service and attestation/metadata check advisories
+  (affected `<5.3.13`).
+
 ## [0.2.15-sec.4] - 2026-11-20
 
 ### Fixes
