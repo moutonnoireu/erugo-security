@@ -13,17 +13,22 @@ use Illuminate\Support\Facades\Crypt;
 use App\Jobs\sendEmail;
 use App\Mail\reverseShareInviteMail;
 use App\Models\Setting;
+use App\Services\ReverseShareLinks;
 
 
 class ReverseSharesController extends Controller
 {
+    private function reverseSharesAllowed(): bool
+    {
+        $value = Setting::where('key', 'allow_reverse_shares')->first()?->value ?? false;
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
     public function createInvite(Request $request)
     {
 
-        $allowReverseShares = Setting::where('key', 'allow_reverse_shares')->first()->value;
-        $allowReverseShares = filter_var($allowReverseShares, FILTER_VALIDATE_BOOLEAN);
-
-        if (!$allowReverseShares) {
+        if (!$this->reverseSharesAllowed()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Reverse shares are not allowed'
@@ -107,5 +112,74 @@ class ReverseSharesController extends Controller
                 'invite' => $invite
             ]
         ]);
+    }
+
+    /**
+     * Create a reverse share invite and return its link instead of sending an e-mail.
+     */
+    public function createLink(Request $request, ReverseShareLinks $links)
+    {
+        if (!$this->reverseSharesAllowed()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Reverse shares are not allowed'
+            ], 400);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'recipient_name' => ['nullable', 'string', 'max:255'],
+            'message' => ['nullable', 'string', 'max:1000'],
+            'expiry_days' => ['nullable', 'integer', 'min:1', 'max:30'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'data' => [
+                    'errors' => $validator->errors()
+                ]
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
+        $recipientName = $request->input('recipient_name') ?: 'Invité';
+        $expiryDays = (int) ($request->input('expiry_days') ?: 7);
+
+        $guestUser = User::create([
+            'name' => $recipientName,
+            'email' => Str::random(20), //we don't need a real email for the guest user
+            'password' => Hash::make(Str::random(20)), //set a random password so the user can't login
+        ]);
+        $guestUser->is_guest = true;
+        $guestUser->save();
+
+        $encryptedToken = $links->guestToken($guestUser, $expiryDays);
+
+        $invite = ReverseShareInvite::create([
+            'user_id' => $user->id,
+            'guest_user_id' => $guestUser->id,
+            'recipient_name' => $recipientName,
+            'recipient_email' => $guestUser->email,
+            'message' => $request->input('message'),
+            'expires_at' => now()->addDays($expiryDays)
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'invite' => $invite,
+                'url' => $links->inviteUrl($invite, $encryptedToken),
+                'expires_at' => $invite->expires_at->copy()->utc()->format('Y-m-d\TH:i:s\Z'),
+            ]
+        ], 201);
     }
 }

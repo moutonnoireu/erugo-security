@@ -27,6 +27,7 @@ class reverseShareInviteMail extends Mailable
     public $token;
     public $invite;
     public $isExistingUser;
+    public $invite_url;
 
     public function __construct(User $user, ReverseShareInvite $invite, $token, $isExistingUser = false)
     {
@@ -34,6 +35,7 @@ class reverseShareInviteMail extends Mailable
         $this->invite = $invite;
         $this->token = $token;
         $this->isExistingUser = $isExistingUser;
+        $this->invite_url = app(\App\Services\ReverseShareLinks::class)->inviteUrl($invite, $token, $isExistingUser);
         $this->recipient_name = explode(' ', $invite->recipient_name)[0];
         $this->sender_name = explode(' ', $user->name)[0];
     }
