@@ -1,3 +1,4 @@
+{#- Print block() without filters: it is already escaped, and a filter would escape it twice -#}
 <!DOCTYPE html>
 <html lang="{{ brand.lang|default('en') }}" xmlns="http://www.w3.org/1999/xhtml">
 	<head>
@@ -5,7 +6,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta name="color-scheme" content="light dark">
 		<meta name="supported-color-schemes" content="light dark">
-		<title>{% block title %}{{ block('header')|striptags|trim }}{% endblock %}</title>
+		<title>{% block title %}{{ block('header') }}{% endblock %}</title>
 		<style>
 			body { margin: 0; padding: 0; background-color: #ffffff; }
 			table { border-collapse: collapse; }
@@ -48,7 +49,7 @@
 									<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 26px;">
 										<tr>
 											<td align="center" bgcolor="{{ brand.accent|default('#1f5a6e') }}" style="background-color:{{ brand.accent|default('#1f5a6e') }};border-radius:3px;padding:12px 22px;">
-												<a href="{{ block('action_url')|trim }}" style="display:inline-block;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;line-height:20px;color:{{ brand.accent_ink|default('#ffffff') }};text-decoration:none;border-radius:3px;">{{ block('action_text')|trim }}</a>
+												<a href="{{ block('action_url') }}" style="display:inline-block;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;line-height:20px;color:{{ brand.accent_ink|default('#ffffff') }};text-decoration:none;border-radius:3px;">{{ block('action_text') }}</a>
 											</td>
 										</tr>
 									</table>
@@ -57,7 +58,7 @@
 								<hr class="rule" style="border:0;border-top:1px solid #e5e5e5;margin:26px 0 14px;">
 								{% if block('action_url') is defined %}
 									<p class="muted" style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6b7370;">{{ t('fallback') }}</p>
-									<p class="muted" style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#6b7370;word-break:break-all;"><a href="{{ block('action_url')|trim }}" style="color:#6b7370;text-decoration:underline;">{{ block('action_url')|trim }}</a></p>
+									<p class="muted" style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#6b7370;word-break:break-all;"><a href="{{ block('action_url') }}" style="color:#6b7370;text-decoration:underline;">{{ block('action_url') }}</a></p>
 								{% endif %}
 								{% if block('footer') is defined and block('footer')|trim != '' %}
 									<div class="muted" style="font-size:13px;line-height:1.5;color:#6b7370;">{{ block('footer') }}</div>

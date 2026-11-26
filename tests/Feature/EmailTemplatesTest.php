@@ -354,6 +354,24 @@ class EmailTemplatesTest extends TestCase
         $this->assertCount(0, app('mail.manager')->mailer('array')->getSymfonyTransport()->messages());
     }
 
+    public function test_special_characters_are_escaped_once(): void
+    {
+        $this->setSetting('application_name', 'Dupont & Associés');
+
+        $html = $this->render('shareExpiredWarningMail');
+        $this->assertStringNotContainsString('&amp;amp;', $html);
+        $this->assertMatchesRegularExpression('/>Open Dupont &amp; Associés<\/a>/', $html);
+
+        // Same layout in the sandbox of the preview, with markup in a value kept inert
+        $this->setSetting('application_name', '<b>X</b> & Y');
+        $preview = $this->previewRequest([
+            'header' => "{{ settings.application_name }}", 'content' => '<p>c</p>',
+            'action_text' => "{{ t('share_expired.button', {app: settings.application_name}) }}",
+        ])->assertOk()->json('data.html');
+        $this->assertStringNotContainsString('&amp;amp;', $preview);
+        $this->assertStringNotContainsString('<b>X</b>', $preview);
+    }
+
     public function test_language_and_logo_endpoints_are_admin_only(): void
     {
         $user = User::factory()->create();
