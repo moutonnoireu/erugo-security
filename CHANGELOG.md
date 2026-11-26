@@ -6,6 +6,12 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt daily from scratch to pick up Alpine and PHP security updates.
 
+## [0.2.15-sec.7] - 2026-11-26
+
+### Fixes
+- E-mails: "&" and other special characters were escaped twice on the button, its link and the title
+  ("&amp;" shown on the button).
+
 ## [0.2.15-sec.6] - 2026-11-26
 
 ### E-mails
