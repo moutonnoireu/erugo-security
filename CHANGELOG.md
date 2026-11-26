@@ -6,6 +6,19 @@ version), `latest` (latest release), `edge` (current `php-fix` branch, not a rel
 
 Every release image is rebuilt daily from scratch to pick up Alpine and PHP security updates.
 
+## [0.2.15-sec.6] - 2026-11-26
+
+### E-mails
+- Outlook rendering: the logo and its plate are one image (dark mode no longer inverts the plate), the
+  column is fluid instead of a fixed 570px, and the button keeps its padding.
+- Optional footer per template, shown at the bottom; it replaces the "automatic message" line.
+- Template editor: preview with sample data (wide or narrow, sandboxed) and "Send me a test" to the
+  signed-in administrator. The preview does not reproduce dark mode nor a given mail client.
+
+### Dependencies
+- Symfony 7.4.24 (http-foundation, http-kernel, mailer, routing, serializer): fixes the `composer audit`
+  advisories, among them SMTP man-in-the-middle in the mailer and URL generation to another host.
+
 ## [0.2.15-sec.5] - 2026-11-25
 
 ### Features
