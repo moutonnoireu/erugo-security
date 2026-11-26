@@ -194,6 +194,37 @@ class EmailTemplatesTest extends TestCase
         $this->assertSame('Consulter les fichiers', EmailTranslator::t('share_created.button', [], 'fr'));
     }
 
+    public function test_logo_and_plate_are_flattened_into_one_image(): void
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            $this->markTestSkipped('GD is not available');
+        }
+        $this->setSetting('application_url', 'https://partage.example.test');
+        $this->setSetting('email_logo_background', '#112233');
+        $image = imagecreatetruecolor(400, 100);
+        imagesavealpha($image, true);
+        imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
+        ob_start();
+        imagepng($image);
+        Storage::disk('public')->put('images/email-logo.png', (string) ob_get_clean());
+
+        $html = $this->render('shareDownloadedMail');
+
+        $this->assertMatchesRegularExpression('/<img src="https:\/\/partage\.example\.test\/images\/email-logo-plate-[0-9a-f]{12}\.png" alt="Cabinet Exemple" width="184" height="56"/', $html);
+        $files = array_values(array_filter(Storage::disk('public')->files('images'), fn($f) => str_contains($f, 'email-logo-plate-')));
+        $this->assertCount(1, $files);
+        $flat = imagecreatefromstring(Storage::disk('public')->get($files[0]));
+        $this->assertSame([460, 140], [imagesx($flat), imagesy($flat)]);
+        // A transparent logo shows the plate colour, opaque
+        $this->assertSame(0x112233, imagecolorat($flat, 200, 70) & 0xFFFFFFFF);
+
+        // A new colour replaces the previous image
+        $this->setSetting('email_logo_background', '#ffffff');
+        $this->render('shareDownloadedMail');
+        $this->assertCount(1, array_filter(Storage::disk('public')->files('images'), fn($f) => str_contains($f, 'email-logo-plate-')));
+        $this->assertFalse(Storage::disk('public')->exists($files[0]));
+    }
+
     public function test_language_and_logo_endpoints_are_admin_only(): void
     {
         $user = User::factory()->create();

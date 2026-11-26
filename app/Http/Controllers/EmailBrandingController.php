@@ -65,6 +65,7 @@ class EmailBrandingController extends Controller
     foreach (EmailBrand::LOGO_FILES as $path) {
       Storage::disk('public')->delete($path);
     }
+    EmailBrand::deletePlatedLogos();
   }
 
   private function payload()
