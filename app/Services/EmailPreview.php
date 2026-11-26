@@ -18,7 +18,7 @@ use Twig\Sandbox\SecurityPolicy;
 class EmailPreview
 {
     private const TAGS = ['extends', 'block', 'if', 'for', 'set'];
-    private const FILTERS = ['capitalize', 'date', 'default', 'e', 'escape', 'join', 'length', 'lower', 'nl2br', 'raw', 'striptags', 'title', 'trim', 'upper'];
+    private const FILTERS = ['capitalize', 'date', 'default', 'e', 'escape', 'join', 'length', 'lower', 'nl2br', 'striptags', 'title', 'trim', 'upper'];
     private const FUNCTIONS = ['block', 'parent', 't'];
 
     public function __construct(private SettingsService $settings)
