@@ -552,7 +552,16 @@
       "no_changes": "Nessuna modifica da salvare",
       "passwordReset": "Ripristino della password",
       "requiredFields": "Campi obbligatori",
+      "preview": {
+        "show": "Anteprima",
+        "narrow": "Vista stretta",
+        "wide": "Vista larga",
+        "close": "Chiudi anteprima",
+        "note": "Dati di esempio. La resa può variare nel client di posta, in particolare in modalità scura."
+      },
       "sections": {
+        "footer": "Piè di pagina",
+        "footerDescription": "Facoltativo, HTML consentito. Mostrato in fondo all’e-mail; sostituisce la riga \"messaggio automatico\".",
         "action_text": "Testo del pulsante di azione",
         "action_url": "URL di azione",
         "content": "Contenuto del messaggio",

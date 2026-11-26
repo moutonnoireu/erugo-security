@@ -552,7 +552,16 @@
       "no_changes": "Keine Änderungen zu speichern",
       "passwordReset": "Passwort zurücksetzen",
       "requiredFields": "Erforderliche Felder",
+      "preview": {
+        "show": "Vorschau",
+        "narrow": "Schmale Ansicht",
+        "wide": "Breite Ansicht",
+        "close": "Vorschau schließen",
+        "note": "Beispieldaten. Die Darstellung kann in Ihrem E-Mail-Programm abweichen, besonders im Dunkelmodus."
+      },
       "sections": {
+        "footer": "Fußzeile",
+        "footerDescription": "Optional, HTML erlaubt. Unten in der E-Mail angezeigt; ersetzt die Zeile „automatische Nachricht“.",
         "action_text": "Text der Aktionsschaltfläche",
         "action_url": "Aktions-URL",
         "content": "Inhalt der Nachricht",

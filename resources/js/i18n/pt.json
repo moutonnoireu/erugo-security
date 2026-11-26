@@ -531,7 +531,16 @@
       "no_changes": "Não há alterações a guardar",
       "passwordReset": "Redefinição da palavra-passe",
       "requiredFields": "Campos obrigatórios",
+      "preview": {
+        "show": "Pré-visualizar",
+        "narrow": "Vista estreita",
+        "wide": "Vista larga",
+        "close": "Fechar pré-visualização",
+        "note": "Dados de exemplo. A apresentação pode variar no cliente de e-mail, sobretudo no modo escuro."
+      },
       "sections": {
+        "footer": "Rodapé",
+        "footerDescription": "Opcional, HTML permitido. Mostrado no fim do e-mail; substitui a linha \"mensagem automática\".",
         "action_text": "Texto do botão de ação",
         "action_url": "Ação URL",
         "content": "Conteúdo da mensagem",

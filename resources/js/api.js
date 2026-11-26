@@ -1429,6 +1429,15 @@ export const updateEmailTemplates = async (templates) => {
   return data.data
 }
 
+export const previewEmailTemplate = async (id, variables) =>
+  dataOrThrow(
+    await fetchWithAuth(`${apiUrl}/api/email-templates/preview`, {
+      method: 'POST',
+      headers: { ...addJsonHeader() },
+      body: JSON.stringify({ id, variables })
+    })
+  )
+
 // Database Backup Methods
 export const getBackups = async () => {
   const response = await fetchWithAuth(`${apiUrl}/api/backups`, {

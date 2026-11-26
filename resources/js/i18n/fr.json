@@ -578,7 +578,16 @@
       "no_changes": "Aucun changement à enregistrer",
       "passwordReset": "Réinitialiser le mot de passe",
       "requiredFields": "Champs obligatoires",
+      "preview": {
+        "show": "Aperçu",
+        "narrow": "Vue étroite",
+        "wide": "Vue large",
+        "close": "Fermer l’aperçu",
+        "note": "Données d’exemple. Le rendu peut différer dans votre messagerie, en mode sombre notamment."
+      },
       "sections": {
+        "footer": "Pied de page",
+        "footerDescription": "Facultatif, HTML autorisé. Affiché en bas de l’e-mail ; remplace la ligne « Ce message est automatique ».",
         "action_text": "Texte du bouton d'action",
         "action_url": "Action URL",
         "content": "Contenu du message",

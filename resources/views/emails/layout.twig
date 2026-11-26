@@ -59,7 +59,11 @@
 									<p class="muted" style="margin:0 0 6px;font-size:13px;line-height:1.5;color:#6b7370;">{{ t('fallback') }}</p>
 									<p class="muted" style="margin:0 0 12px;font-size:13px;line-height:1.5;color:#6b7370;word-break:break-all;"><a href="{{ block('action_url')|trim }}" style="color:#6b7370;text-decoration:underline;">{{ block('action_url')|trim }}</a></p>
 								{% endif %}
-								<p class="muted" style="margin:0;font-size:13px;line-height:1.5;color:#6b7370;">{{ t('automatic') }}</p>
+								{% if block('footer') is defined and block('footer')|trim != '' %}
+									<div class="muted" style="font-size:13px;line-height:1.5;color:#6b7370;">{{ block('footer') }}</div>
+								{% else %}
+									<p class="muted" style="margin:0;font-size:13px;line-height:1.5;color:#6b7370;">{{ t('automatic') }}</p>
+								{% endif %}
 							</td>
 						</tr>
 					</table>

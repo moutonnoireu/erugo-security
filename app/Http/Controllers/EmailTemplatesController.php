@@ -7,6 +7,7 @@ use App\Models\Setting;
 use Illuminate\Support\Facades\Validator;
 use App\Utils\FileHelper;
 use App\Services\EmailTranslator;
+use App\Services\EmailPreview;
 
 class EmailTemplatesController extends Controller
 {
@@ -46,6 +47,43 @@ class EmailTemplatesController extends Controller
         'templates' => $templates
       ]
     ]);
+  }
+
+  /** Render unsaved blocks of a template with sample data. Nothing is stored or sent. */
+  public function preview(Request $request, EmailPreview $preview)
+  {
+    $validator = Validator::make($request->all(), [
+      'id' => ['required', 'string', 'regex:/^[a-zA-Z0-9_-]+$/'],
+      'variables' => 'required|array',
+      'variables.header' => 'nullable|string|max:2000',
+      'variables.content' => 'nullable|string|max:50000',
+      'variables.action_text' => 'nullable|string|max:2000',
+      'variables.footer' => 'nullable|string|max:10000',
+    ]);
+
+    if ($validator->fails()) {
+      return response()->json(['status' => 'error', 'message' => 'Invalid template', 'data' => $validator->errors()], 422);
+    }
+
+    $originalPath = resource_path('views/emails/' . basename($request->input('id')) . '.twig');
+    if ($request->input('id') === 'layout' || !file_exists($originalPath)) {
+      return response()->json(['status' => 'error', 'message' => 'Template not found'], 404);
+    }
+
+    $blocks = array_intersect_key($request->input('variables'), array_flip(['header', 'content', 'action_text', 'footer']));
+    // The link is read-only in the editor: always take it from the shipped template.
+    $original = $this->extractVariables(file_get_contents($originalPath));
+    if (isset($original['action_url'])) {
+      $blocks['action_url'] = $original['action_url'];
+    }
+
+    try {
+      $html = $preview->render($blocks);
+    } catch (\Twig\Error\Error $e) {
+      return response()->json(['status' => 'error', 'message' => $e->getRawMessage()], 422);
+    }
+
+    return response()->json(['status' => 'success', 'data' => ['html' => $html]]);
   }
 
   private function getTemplateContent($template_file)
@@ -122,6 +160,7 @@ class EmailTemplatesController extends Controller
         'content' => 'required|string',
         'id' => 'required|string',
         'subject' => 'required|string',
+        'variables.footer' => 'nullable|string|max:10000',
       ];
 
       // Only require blocks that exist in the original template
@@ -182,12 +221,17 @@ class EmailTemplatesController extends Controller
       ? "{% block action_text %}{$template['variables']['action_text']}{% endblock %}"
       : '';
 
+    // Optional footer: when empty, the layout shows its default "automatic message" line
+    $footer = trim((string) ($template['variables']['footer'] ?? ''));
+    $footerBlock = $footer !== '' ? "{% block footer %}{$footer}{% endblock %}" : '';
+
     $template_twig = <<<TWIG
       {% extends 'emails/layout' %}
       {% block header %}{$template['variables']['header']}{% endblock %}
       {% block content %}{$template['variables']['content']}{% endblock %}
       {$actionUrlBlock}
       {$actionTextBlock}
+      {$footerBlock}
       {# file generated at {$date} #}
     TWIG;
 

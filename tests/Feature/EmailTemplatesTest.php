@@ -225,6 +225,93 @@ class EmailTemplatesTest extends TestCase
         $this->assertFalse(Storage::disk('public')->exists($files[0]));
     }
 
+    private function previewRequest(array $variables, string $id = 'shareCreatedMail', ?User $user = null)
+    {
+        return $this->postJson('/api/email-templates/preview', ['id' => $id, 'variables' => $variables], $this->bearer($user ?? $this->admin()));
+    }
+
+    public function test_footer_replaces_the_automatic_line(): void
+    {
+        $default = $this->previewRequest(['header' => 'Titre', 'content' => '<p>Corps</p>', 'action_text' => 'Ouvrir'])
+            ->assertOk()->json('data.html');
+        $this->assertStringContainsString('This is an automatic message', $default);
+
+        $html = $this->previewRequest([
+            'header' => 'Titre', 'content' => '<p>Corps</p>', 'action_text' => 'Ouvrir',
+            'footer' => '<p>Envoyé par <a href="https://example.test">{{ brand.name }}</a></p>',
+        ])->assertOk()->json('data.html');
+        $this->assertStringContainsString('Envoyé par <a href="https://example.test">Cabinet Exemple</a>', $html);
+        $this->assertStringNotContainsString('This is an automatic message', $html);
+        $this->assertGreaterThan(strpos($html, 'Ouvrir</a>'), strpos($html, 'Envoyé par'));
+        $this->assertStringNotContainsString('<style', $html);
+    }
+
+    public function test_footer_is_saved_listed_and_used_by_the_real_mail(): void
+    {
+        $headers = $this->bearer($this->admin());
+        $template = collect($this->getJson('/api/email-templates', $headers)->json('data.templates'))->firstWhere('id', 'shareExpiredWarningMail');
+        $template['variables']['footer'] = '<p>Pied personnalisé</p>';
+
+        $this->putJson('/api/email-templates', [$template], $headers)->assertOk();
+
+        $saved = collect($this->getJson('/api/email-templates', $headers)->json('data.templates'))->firstWhere('id', 'shareExpiredWarningMail');
+        $this->assertSame('<p>Pied personnalisé</p>', trim($saved['variables']['footer']));
+        $this->assertNotContains('footer', $saved['requiredVariables']);
+        app('view')->getFinder()->flush();
+        $html = $this->render('shareExpiredWarningMail');
+        $this->assertStringContainsString('Pied personnalisé', $html);
+        $this->assertStringNotContainsString('This is an automatic message', $html);
+
+        $saved['variables']['footer'] = '';
+        $this->putJson('/api/email-templates', [$saved], $headers)->assertOk();
+        $cleared = collect($this->getJson('/api/email-templates', $headers)->json('data.templates'))->firstWhere('id', 'shareExpiredWarningMail');
+        $this->assertArrayNotHasKey('footer', $cleared['variables']);
+    }
+
+    public function test_every_shipped_template_can_be_previewed(): void
+    {
+        $headers = $this->bearer($this->admin());
+
+        foreach ($this->getJson('/api/email-templates', $headers)->json('data.templates') as $template) {
+            $response = $this->postJson('/api/email-templates/preview', [
+                'id' => $template['id'], 'variables' => $template['variables'],
+            ], $headers);
+            $this->assertSame(200, $response->status(), $template['id'] . ': ' . $response->json('message'));
+        }
+    }
+
+    /** @dataProvider forbiddenTwig */
+    public function test_preview_is_sandboxed(string $payload): void
+    {
+        $this->previewRequest(['header' => 'T', 'content' => $payload])->assertStatus(422);
+    }
+
+    public static function forbiddenTwig(): array
+    {
+        return [
+            'laravel config' => ['{{ config_get("app.key") }}'],
+            'config function' => ['{{ config("app.key") }}'],
+            'facade' => ['{{ Auth.user() }}{{ app() }}'],
+            'callable filter' => ['{{ ["id"]|map("system")|join }}'],
+            'include' => ['{% include "emails/layout" %}'],
+            'include function' => ['{{ include("emails/layout") }}'],
+            'source' => ['{{ source("emails/layout") }}'],
+            'constant' => ['{{ constant("PHP_VERSION") }}'],
+            'syntax error' => ['{% if %}'],
+        ];
+    }
+
+    public function test_preview_is_admin_only_and_checks_the_template(): void
+    {
+        $this->postJson('/api/email-templates/preview', [])->assertStatus(401);
+        $user = User::factory()->create();
+        $user->forceFill(['admin' => false, 'active' => true, 'is_guest' => false])->save();
+        $this->previewRequest(['header' => 'T'], 'shareCreatedMail', $user)->assertStatus(403);
+        Auth::forgetGuards();
+        $this->previewRequest(['header' => 'T'], 'layout')->assertStatus(404);
+        $this->previewRequest(['header' => 'T'], '../layout')->assertStatus(422);
+    }
+
     public function test_language_and_logo_endpoints_are_admin_only(): void
     {
         $user = User::factory()->create();
