@@ -10,6 +10,10 @@ class EmailBrand
   public const LOGO_FILES = ['images/email-logo.png', 'images/email-logo.jpg'];
   public const DEFAULT_PLATE = '#ffffff';
   public const DEFAULT_ACCENT = '#1f5a6e';
+  private const FLAT_PREFIX = 'email-logo-plate-';
+  /** Displayed size of the logo with its plate: height, and maximum width (column minus padding). */
+  private const LOGO_HEIGHT = 56;
+  private const LOGO_MAX_WIDTH = 400;
 
   public static function hex(?string $value, string $default): string
   {
@@ -49,6 +53,57 @@ class EmailBrand
     return null;
   }
 
+  /**
+   * The logo drawn on its plate, as one PNG. Mail clients in dark mode (Outlook) invert CSS
+   * backgrounds but not images, which made a light logo on a dark plate unreadable.
+   * Returns null when the image cannot be processed; the layout then uses a CSS plate.
+   *
+   * @return array{path: string, width: int, height: int}|null
+   */
+  public static function platedLogo(string $logo, string $plate): ?array
+  {
+    $disk = Storage::disk('public');
+    $path = 'images/' . self::FLAT_PREFIX . substr(md5($logo . $disk->lastModified($logo) . $plate), 0, 12) . '.png';
+
+    if (!$disk->exists($path)) {
+      $source = function_exists('imagecreatefromstring') ? @imagecreatefromstring((string) $disk->get($logo)) : false;
+      if (!$source) {
+        return null;
+      }
+      [$w, $h] = [imagesx($source), imagesy($source)];
+      // Same proportions as an 8px/12px plate around a 40px logo
+      [$padX, $padY] = [(int) round($h * 0.3), (int) round($h * 0.2)];
+
+      $canvas = imagecreatetruecolor($w + 2 * $padX, $h + 2 * $padY);
+      [$r, $g, $b] = array_map('hexdec', str_split(substr($plate, 1), 2));
+      imagefill($canvas, 0, 0, imagecolorallocate($canvas, $r, $g, $b));
+      imagealphablending($canvas, true);
+      imagecopy($canvas, $source, $padX, $padY, 0, 0, $w, $h);
+
+      ob_start();
+      imagepng($canvas);
+      $png = (string) ob_get_clean();
+
+      self::deletePlatedLogos();
+      $disk->put($path, $png);
+    }
+
+    $size = getimagesizefromstring((string) $disk->get($path));
+    $scale = min(self::LOGO_HEIGHT / $size[1], self::LOGO_MAX_WIDTH / $size[0]);
+
+    return ['path' => $path, 'width' => (int) round($size[0] * $scale), 'height' => (int) round($size[1] * $scale)];
+  }
+
+  public static function deletePlatedLogos(): void
+  {
+    $disk = Storage::disk('public');
+    foreach ($disk->files('images') as $file) {
+      if (str_starts_with(basename($file), self::FLAT_PREFIX)) {
+        $disk->delete($file);
+      }
+    }
+  }
+
   public static function toArray(): array
   {
     $settings = app(SettingsService::class);
@@ -57,7 +112,10 @@ class EmailBrand
     $logo = self::logoPath();
     $plate = self::hex($settings->get('email_logo_background'), self::DEFAULT_PLATE);
 
+    $plated = $logo && $url !== '' ? self::platedLogo($logo, $plate) : null;
+
     return [
+      'plated_logo' => $plated ? ['url' => $url . '/' . $plated['path'], 'width' => $plated['width'], 'height' => $plated['height']] : null,
       'name' => (string) $settings->get('application_name'),
       'url' => $url,
       'logo_url' => $logo && $url !== '' ? $url . '/' . $logo . '?v=' . Storage::disk('public')->lastModified($logo) : null,

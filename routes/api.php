@@ -202,6 +202,8 @@ Route::group([], function ($router) {
     Route::group(['prefix' => 'email-templates', 'middleware' => ['auth', Admin::class]], function ($router) {
         Route::get('/', [EmailTemplatesController::class, 'index'])->name('email-templates.index');
         Route::put('/', [EmailTemplatesController::class, 'update'])->name('email-templates.update');
+        Route::post('/preview', [EmailTemplatesController::class, 'preview'])->name('email-templates.preview');
+        Route::post('/test', [EmailTemplatesController::class, 'sendTest'])->middleware('throttle:10,1')->name('email-templates.test');
     });
 
     //manage e-mail logo and languages [auth, admin]

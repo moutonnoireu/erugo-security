@@ -599,7 +599,18 @@
       "no_changes": "No changes to save",
       "passwordReset": "Password Reset",
       "requiredFields": "Required Fields",
+      "preview": {
+        "sendTest": "Send me a test",
+        "sent": "Test e-mail sent to {email}",
+        "show": "Preview",
+        "narrow": "Narrow view",
+        "wide": "Wide view",
+        "close": "Close preview",
+        "note": "Sample data. The rendering may differ in your mail client, in dark mode in particular."
+      },
       "sections": {
+        "footer": "Footer",
+        "footerDescription": "Optional, HTML allowed. Shown at the bottom of the e-mail; replaces the \"automatic message\" line.",
         "action_text": "Action button text",
         "action_url": "Action URL",
         "content": "Message content",

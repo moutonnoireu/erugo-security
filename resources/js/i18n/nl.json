@@ -552,7 +552,18 @@
       "no_changes": "Geen wijzigingen om op te slaan",
       "passwordReset": "Wachtwoord opnieuw instellen",
       "requiredFields": "Verplichte velden",
+      "preview": {
+        "sendTest": "Stuur mij een test",
+        "sent": "Test-e-mail verzonden naar {email}",
+        "show": "Voorbeeld",
+        "narrow": "Smalle weergave",
+        "wide": "Brede weergave",
+        "close": "Voorbeeld sluiten",
+        "note": "Voorbeeldgegevens. De weergave kan in uw e-mailprogramma afwijken, vooral in donkere modus."
+      },
       "sections": {
+        "footer": "Voettekst",
+        "footerDescription": "Optioneel, HTML toegestaan. Onderaan de e-mail; vervangt de regel \"automatisch bericht\".",
         "action_text": "Tekst actieknop",
         "action_url": "Actie URL",
         "content": "Inhoud bericht",
