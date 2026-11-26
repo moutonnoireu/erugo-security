@@ -312,6 +312,48 @@ class EmailTemplatesTest extends TestCase
         $this->previewRequest(['header' => 'T'], '../layout')->assertStatus(422);
     }
 
+    private function fakeSmtp(): void
+    {
+        $this->mock(\App\Services\EmailConfigService::class, function ($mock) {
+            $mock->shouldReceive('configureMailer')->andReturnUsing(fn() => app('mail.manager')->mailer('array'));
+            $mock->shouldReceive('configureMailable')->andReturnUsing(fn($mailable) => $mailable->from('partage@example.test'));
+        });
+    }
+
+    public function test_test_mail_goes_to_the_signed_in_admin_only(): void
+    {
+        $this->fakeSmtp();
+        $admin = $this->admin();
+
+        $this->postJson('/api/email-templates/test', [
+            'id' => 'shareCreatedMail', 'subject' => 'Sujet', 'to' => 'other@example.test',
+            'variables' => ['header' => 'Titre', 'content' => '<p>Brouillon</p>', 'action_text' => 'Ouvrir'],
+        ], $this->bearer($admin))->assertOk()->assertJsonPath('data.sent_to', $admin->email);
+
+        $messages = app('mail.manager')->mailer('array')->getSymfonyTransport()->messages();
+        $this->assertCount(1, $messages);
+        $message = $messages[0]->getOriginalMessage();
+        $this->assertSame([$admin->email], array_map(fn($a) => $a->getAddress(), $message->getTo()));
+        $this->assertSame('[Test] Sujet', $message->getSubject());
+        $this->assertStringContainsString('<p>Brouillon</p>', $message->getHtmlBody());
+        // The real mail keeps its <style> element, unlike the in-app preview
+        $this->assertStringContainsString('<style', $message->getHtmlBody());
+    }
+
+    public function test_test_mail_is_admin_only_and_sandboxed(): void
+    {
+        $this->fakeSmtp();
+        $draft = ['id' => 'shareCreatedMail', 'subject' => 'S', 'variables' => ['content' => '{{ config("app.key") }}']];
+
+        $this->postJson('/api/email-templates/test', $draft)->assertStatus(401);
+        $this->postJson('/api/email-templates/test', $draft, $this->bearer($this->admin()))->assertStatus(422);
+        $user = User::factory()->create();
+        $user->forceFill(['admin' => false, 'active' => true, 'is_guest' => false])->save();
+        Auth::forgetGuards();
+        $this->postJson('/api/email-templates/test', $draft, $this->bearer($user))->assertStatus(403);
+        $this->assertCount(0, app('mail.manager')->mailer('array')->getSymfonyTransport()->messages());
+    }
+
     public function test_language_and_logo_endpoints_are_admin_only(): void
     {
         $user = User::factory()->create();

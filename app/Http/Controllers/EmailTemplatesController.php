@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Validator;
 use App\Utils\FileHelper;
 use App\Services\EmailTranslator;
 use App\Services\EmailPreview;
+use App\Services\EmailConfigService;
+use Illuminate\Mail\Mailable;
 
 class EmailTemplatesController extends Controller
 {
@@ -52,6 +54,40 @@ class EmailTemplatesController extends Controller
   /** Render unsaved blocks of a template with sample data. Nothing is stored or sent. */
   public function preview(Request $request, EmailPreview $preview)
   {
+    $html = $this->renderDraft($request, $preview, true);
+
+    return is_string($html) ? response()->json(['status' => 'success', 'data' => ['html' => $html]]) : $html;
+  }
+
+  /** Send the unsaved blocks, with sample data, to the signed-in administrator and nobody else. */
+  public function sendTest(Request $request, EmailPreview $preview, EmailConfigService $mail)
+  {
+    $validator = Validator::make($request->all(), ['subject' => 'required|string|max:255']);
+    if ($validator->fails()) {
+      return response()->json(['status' => 'error', 'message' => 'Invalid template', 'data' => $validator->errors()], 422);
+    }
+
+    $html = $this->renderDraft($request, $preview, false);
+    if (!is_string($html)) {
+      return $html;
+    }
+
+    $to = $request->user()->email;
+    $mailable = (new Mailable())->subject('[Test] ' . $request->input('subject'))->html($html);
+
+    try {
+      $mail->configureMailer()->to($to)->send($mail->configureMailable($mailable));
+    } catch (\Throwable $e) {
+      report($e);
+      return response()->json(['status' => 'error', 'message' => 'The test e-mail could not be sent: ' . $e->getMessage()], 502);
+    }
+
+    return response()->json(['status' => 'success', 'data' => ['sent_to' => $to]]);
+  }
+
+  /** @return string|\Illuminate\Http\JsonResponse the rendered HTML, or the error to return */
+  private function renderDraft(Request $request, EmailPreview $preview, bool $forBrowser)
+  {
     $validator = Validator::make($request->all(), [
       'id' => ['required', 'string', 'regex:/^[a-zA-Z0-9_-]+$/'],
       'variables' => 'required|array',
@@ -78,12 +114,10 @@ class EmailTemplatesController extends Controller
     }
 
     try {
-      $html = $preview->render($blocks);
+      return $preview->render($blocks, $forBrowser);
     } catch (\Twig\Error\Error $e) {
       return response()->json(['status' => 'error', 'message' => $e->getRawMessage()], 422);
     }
-
-    return response()->json(['status' => 'success', 'data' => ['html' => $html]]);
   }
 
   private function getTemplateContent($template_file)

@@ -600,6 +600,8 @@
       "passwordReset": "Password Reset",
       "requiredFields": "Required Fields",
       "preview": {
+        "sendTest": "Send me a test",
+        "sent": "Test e-mail sent to {email}",
         "show": "Preview",
         "narrow": "Narrow view",
         "wide": "Wide view",

@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { previewEmailTemplate } from '../api'
+import { useToast } from 'vue-toastification'
+import { useTranslate } from '@tolgee/vue'
+import { previewEmailTemplate, sendTestEmailTemplate } from '../api'
 
 const props = defineProps({
   modelValue: {
@@ -35,6 +37,24 @@ const showPreview = async () => {
     previewError.value = error.message
   } finally {
     previewLoading.value = false
+  }
+}
+
+const toast = useToast()
+const { t } = useTranslate()
+const sendingTest = ref(false)
+
+// Sends the fields as typed to the signed-in administrator, to check real mail clients
+const sendTest = async () => {
+  sendingTest.value = true
+  try {
+    const { id, subject, variables } = template.value
+    const data = await sendTestEmailTemplate(id, subject, { ...variables })
+    toast.success(t.value('settings.emailTemplates.preview.sent', { email: data.sent_to }))
+  } catch (error) {
+    toast.error(error.message)
+  } finally {
+    sendingTest.value = false
   }
 }
 
@@ -96,6 +116,9 @@ const toggleWidth = () => {
       <div class="preview-actions">
         <button type="button" :disabled="previewLoading" @click="showPreview">
           {{ $t('settings.emailTemplates.preview.show') }}
+        </button>
+        <button type="button" :disabled="sendingTest" @click="sendTest">
+          {{ $t('settings.emailTemplates.preview.sendTest') }}
         </button>
         <template v-if="previewHtml">
           <button type="button" class="secondary" @click="toggleWidth">

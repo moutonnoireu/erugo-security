@@ -532,6 +532,8 @@
       "passwordReset": "Redefinição da palavra-passe",
       "requiredFields": "Campos obrigatórios",
       "preview": {
+        "sendTest": "Enviar-me um teste",
+        "sent": "E-mail de teste enviado para {email}",
         "show": "Pré-visualizar",
         "narrow": "Vista estreita",
         "wide": "Vista larga",

@@ -553,6 +553,8 @@
       "passwordReset": "Wachtwoord opnieuw instellen",
       "requiredFields": "Verplichte velden",
       "preview": {
+        "sendTest": "Stuur mij een test",
+        "sent": "Test-e-mail verzonden naar {email}",
         "show": "Voorbeeld",
         "narrow": "Smalle weergave",
         "wide": "Brede weergave",

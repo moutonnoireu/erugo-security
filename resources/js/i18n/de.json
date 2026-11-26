@@ -553,6 +553,8 @@
       "passwordReset": "Passwort zurücksetzen",
       "requiredFields": "Erforderliche Felder",
       "preview": {
+        "sendTest": "Test an mich senden",
+        "sent": "Test-E-Mail an {email} gesendet",
         "show": "Vorschau",
         "narrow": "Schmale Ansicht",
         "wide": "Breite Ansicht",

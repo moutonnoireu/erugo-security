@@ -27,9 +27,10 @@ class EmailPreview
 
     /**
      * @param array<string, ?string> $blocks header, content, action_url, action_text, footer
+     * @param bool $forBrowser strip <style> for the in-app preview; keep it for a test e-mail
      * @throws \Twig\Error\Error when the template is invalid or uses something not allowed
      */
-    public function render(array $blocks): string
+    public function render(array $blocks, bool $forBrowser = true): string
     {
         $template = "{% extends 'emails/layout' %}\n";
         foreach (['header', 'content', 'action_url', 'action_text', 'footer'] as $name) {
@@ -51,6 +52,10 @@ class EmailPreview
         ));
 
         $html = $twig->render('preview', $this->sampleData());
+
+        if (!$forBrowser) {
+            return $html;
+        }
 
         // The preview is shown under the application's CSP, which refuses <style> elements.
         return (string) preg_replace('/<style\b.*?<\/style>/is', '', $html);
